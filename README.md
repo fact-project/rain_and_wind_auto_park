@@ -7,9 +7,6 @@ A continously running process, which modifies the FACT schedule in order to park
      pip install rain_and_wind_...
    for this we need a `setup.py` file in our project.
 
- - we want unit tests being executed automatically for us, 
- when ever we change something, so we stay sure, we do not accidentally mess something up which worked before. For this we are going to use a servce called travis.org (free! yeah) and for this we need a file called `.travis.yml`
-
  - in the end, we want a single program, which can be called (started) on LA Palma, maybe with a command like: ".. dunno .." for this, we need to devine a "console_script" inside the setup.py, so we automatically get a callable "entry point" after the installation.
 
 
