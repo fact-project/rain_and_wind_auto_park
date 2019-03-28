@@ -1,0 +1,17 @@
+language: python
+
+matrix:
+  include:
+    - python: "3.6"
+    - python: "3.7"
+      dist: xenial
+
+before_install:
+  - export MPLBACKEND=agg
+  - pip install --upgrade pip
+
+install:
+  - pip install .
+
+# script:
+#   - pytest
