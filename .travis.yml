@@ -1,14 +1,10 @@
+dist: xenial   # required for Python >= 3.7
 language: python
-
-matrix:
-  include:
-    - python: "3.6"
-    - python: "3.7"
-      dist: xenial
+python:
+  - "3.7"
 
 before_install:
   - export MPLBACKEND=agg
-  - pip install --upgrade pip
 
 install:
   - pip install .
