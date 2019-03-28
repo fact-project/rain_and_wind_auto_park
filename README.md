@@ -1,4 +1,5 @@
-# rain_and_wind_auto_park
+# rain_and_wind_auto_park [![Build Status](https://travis-ci.org/fact-project/rain_and_wind_auto_park.svg?branch=master)](https://travis-ci.org/fact-project/rain_and_wind_auto_park)
+
 A continously running process, which modifies the FACT schedule in order to park in case of adverse weather conditions
 
 ## Plan for software development stuff
