@@ -1,17 +1,22 @@
 #!/usr/bin/env python
 '''
 Program to collect all RAIN fits files and bundle them up in an h5 file.
+<out_file_name>    for example "foo.h5"
+<path_to_aux_folder>   the path where your fact aux file tree starts
 
-Usage: ./rain_collect_data.py <path_to_aux_folder> <out_file_name>
+Usage:
+  rain_collect_data.py <path_to_aux_folder> <out_file_name>
 
-out_file_name: for example "foo.h5"
+Options:
+  -h --help     Show this screen.
+  --version     Show version.
 '''
 import sys
 import glob
 from astropy.table import Table
 import pandas as pd
 from tqdm import tqdm
-
+from docopt import docopt
 
 def main(path_to_aux_folder, out_file_name):
     '''collect all RAIN fits files from `path_to_aux_folder`
@@ -35,7 +40,9 @@ def main(path_to_aux_folder, out_file_name):
 
 if __name__ == "__main__":
 
+    arguments = docopt(__doc__, version='rain_collect_data 0.1')
+
     main(
-        path_to_aux_folder=sys.argv[1],
-        out_file_name=sys.argv[2],
+        path_to_aux_folder=arguments['<path_to_aux_folder>'],
+        out_file_name=arguments['<out_file_name>'],
     )
