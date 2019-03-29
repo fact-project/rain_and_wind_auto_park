@@ -3,6 +3,7 @@ python:
 
 before_install:
   - export MPLBACKEND=agg
+  - pip install --upgrade pip
 
 install:
   - pip install .
