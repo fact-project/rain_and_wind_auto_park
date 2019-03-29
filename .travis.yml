@@ -8,7 +8,7 @@ python:
 
 install:
   - pip install --upgrade pip setuptools wheel
-  - pip install --only-binary=numpy,scipy,pandas,Ipython,matplotlib numpy scipy pandas ipython matplotlib
+  - pip install --only-binary=numpy,scipy,pandas,Ipython,matplotlib,astropy numpy scipy pandas ipython matplotlib astropy
 
 
 script:
