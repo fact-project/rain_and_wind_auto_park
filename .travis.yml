@@ -1,20 +1,16 @@
-language: generic
-  python: 3.7
+# from: https://github.com/mroberge/hydrofunctions/blob/master/.travis.yml
 
-before_install:
-  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-  - chmod +x miniconda.sh
-  - ./miniconda.sh -b
-  - export PATH=/home/travis/miniconda/bin:$PATH
-  - conda update --yes conda
+language: python
+python:
+  - 3.6
+#  - 3.7-dev
 
-  - export MPLBACKEND=agg
 
 install:
+  - pip install --upgrade pip setuptools wheel
+  - pip install --only-binary=numpy,scipy,pandas,Ipython,matplotlib numpy scipy pandas ipython matplotlib
 
-  - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION
-  - source activate test
-  - pip install .
 
-# script:
-#   - pytest
+script:
+  - pip install -e .
+
