@@ -27,12 +27,14 @@ def main(path_to_aux_folder, out_file_name):
         glob_expression = path_to_aux_folder + "/*/*/*/*RAIN*"
 
         frame = []
-        for path in tqdm(glob.glob(glob_expression)):
+        for path in tqdm(sorted(glob.glob(glob_expression))):
             table = Table.read(path)
             dataframe = table.to_pandas()
             frame.append(dataframe)
 
         result = pd.concat(frame)
+
+        result.sort_values('Time', inplace=True)
         result.to_hdf(out_file_name, key='data')
     except ValueError:
         print('no fits files found, maybe wrong path?')
