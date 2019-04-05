@@ -11,6 +11,8 @@ from docopt import docopt
 
 def main(**kwargs):
 
+    credentials = read_credentials_from_config_file()
+
     we_should_park = False
     we_are_parking = False
 
@@ -24,13 +26,13 @@ def main(**kwargs):
         we_should_park = is_rainy or is_stormy
 
         if we_should_park and not we_are_parking:
-            enter_suspend_task_into_schedule()
+            enter_suspend_task_into_schedule(credentials)
             we_are_parking = True
         elif we_should_park and we_are_parking:
             # nothing to be done
             pass
         elif not we_should_park and we_are_parking:
-            enter_resume_task_into_schedule()
+            enter_resume_task_into_schedule(credentials)
             we_are_parking = False
         elif not we_should_park and not we_are_parking:
             # nothing to be done
@@ -40,12 +42,26 @@ def main(**kwargs):
             raise Exception('we should never reach this line!')
 
 
+def read_credentials_from_config_file(path=None):
+    '''
+    find the little trext file with username / password for
+    Database access. Open this file and get the credentials.
+    '''
+
+    return ('username', 'password')
+
+
 def fetch_rain_sensor_update():
     '''fetch new rain sensor data from tonights AUX file.
     if there is no update, i.e. if there is no new line yet in the AUX file
     return None
 
-    if there is a new line, return a row, from the astropy.Table object
+    if there is a new line, return a row, from a pandas.Dataframe ...
+
+    it should have:
+     - row.Time
+     - row.rain
+     - row.counts
     '''
     return None
 
@@ -78,7 +94,7 @@ def make_storm_decision(wind_update):
     return False
 
 
-def enter_suspend_task_into_schedule():
+def enter_suspend_task_into_schedule(db_credentials):
     '''make an entry in the scheduling DB, which is represented on this website:
     https://www.fact-project.org/schedule/
 
@@ -89,14 +105,14 @@ def enter_suspend_task_into_schedule():
     pass
 
 
-def enter_resume_task_into_schedule():
+def enter_resume_task_into_schedule(db_credentials):
     '''make an entry in the scheduling DB, which is represented on this website:
     https://www.fact-project.org/schedule/
 
     In particular, make a "RESUME" entry for "right now"
     and in addtion remove the "RESUME" task
     after the most recent "SHUTDOWN" entry,
-    if it exists. It shoud exist. If it does not exist, print a warning.
+    if it exists. It should exist. If it does not exist, print a warning.
     '''
     pass
 
