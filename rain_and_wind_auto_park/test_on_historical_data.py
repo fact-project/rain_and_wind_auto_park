@@ -21,10 +21,14 @@ ever it would have scheduled a suspend or a RESUME.
 ... or maybe it would need some fake schedule data for this.
 ... not yet clear
 
+Usage:
+    test_auto_park <base_path> <start_date> <end_date>
+
 '''
 import pandas as pd
 from docopt import docopt
-from script import (
+from tqdm import tqdm
+from rain_and_wind_auto_park.script import (
     make_rain_decision,
     make_storm_decision,
     fetch_sensor_update
@@ -33,15 +37,14 @@ from script import (
 
 def main(**kwargs):
 
-    start_date = pd.to_datetime(kwargs['start_date'])
-    end_date = pd.to_datetime(kwargs['end_date'])
-    base_path = kwargs['base_path']
-
+    start_date = pd.to_datetime(kwargs['<start_date>'])
+    end_date = pd.to_datetime(kwargs['<end_date>'])
+    base_path = kwargs['<base_path>']
 
     we_should_park = False
     we_are_parking = False
 
-    for current_time in pd.date_range(start_date, end_date, period='1m'):
+    for current_time in tqdm(pd.date_range(start_date, end_date, freq='10s')):
 
         rain_update = fetch_sensor_update(
             current_time, base_path, 'RAIN_SENSOR_DATA')
@@ -71,7 +74,7 @@ def main(**kwargs):
 
 
 
-def fake_enter_suspend_task_into_schedule(current_time):
+def fake_enter_suspend_task_into_schedule(credentials, current_time):
     '''fake making an entry in the schedule DB. I do not yet know how.
     We could actually have a copy of the real DB, and make entries in that
     copy ... and in the end, we just store that copy.
@@ -87,7 +90,7 @@ def fake_enter_suspend_task_into_schedule(current_time):
     pass
 
 
-def fake_enter_resume_task_into_schedule(current_time):
+def fake_enter_resume_task_into_schedule(credentials, current_time):
     '''same as above, just for resume. and of course we must not forget
     the special treatment of the RESUME, which should be after the next SHUTDOWN,
     which needs to be removed by us.
