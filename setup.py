@@ -15,5 +15,9 @@ setuptools.setup(
         'console_scripts': [
             'auto_park=rain_and_wind_auto_park.script:entry'
         ],
-    }
+    },
+    install_requires=[
+        'docopt',
+    ]
+
 )
