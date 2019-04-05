@@ -1,0 +1,16 @@
+# from: https://github.com/mroberge/hydrofunctions/blob/master/.travis.yml
+
+language: python
+python:
+  - 3.6
+#  - 3.7-dev
+
+
+install:
+  - pip install --upgrade pip setuptools wheel
+  - pip install --only-binary=numpy,scipy,pandas,Ipython,matplotlib,astropy numpy scipy pandas ipython matplotlib astropy
+
+
+script:
+  - pip install -e .
+
