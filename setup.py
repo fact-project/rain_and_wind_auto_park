@@ -11,4 +11,9 @@ setuptools.setup(
     description="",
     long_description=long_description,
     packages=setuptools.find_packages(),
+    entry_points={
+        'console_scripts': [
+            'auto_park=rain_and_wind_auto_park.script:entry'
+        ],
+    }
 )

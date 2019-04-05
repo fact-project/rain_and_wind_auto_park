@@ -13,4 +13,5 @@ install:
 
 script:
   - pip install -e .
+  - auto_park
 
