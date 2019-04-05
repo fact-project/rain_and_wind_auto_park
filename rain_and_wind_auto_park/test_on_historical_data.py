@@ -22,35 +22,45 @@ ever it would have scheduled a suspend or a RESUME.
 ... not yet clear
 
 '''
+import pandas as pd
 from docopt import docopt
 from script import (
     make_rain_decision,
     make_storm_decision,
+    fetch_sensor_update
 )
 
 
 def main(**kwargs):
 
+    start_date = pd.to_datetime(kwargs['start_date'])
+    end_date = pd.to_datetime(kwargs['end_date'])
+    base_path = kwargs['base_path']
+
+
     we_should_park = False
     we_are_parking = False
 
-    while True:
-        rain_update = fake_fetch_rain_sensor_update()
+    for current_time in pd.date_range(start_date, end_date, period='1m'):
+
+        rain_update = fetch_sensor_update(
+            current_time, base_path, 'RAIN_SENSOR_DATA')
         is_rainy = make_rain_decision(rain_update)
 
-        wind_update = fake_fetch_wind_sensor_update()
+        wind_update = fetch_sensor_update(
+            current_time, base_path, 'MAGIC_WEATHER_DATA')
         is_stormy = make_storm_decision(wind_update)
 
         we_should_park = is_rainy or is_stormy
 
         if we_should_park and not we_are_parking:
-            enter_suspend_task_into_schedule()
+            fake_enter_suspend_task_into_schedule(credentials, current_time)
             we_are_parking = True
         elif we_should_park and we_are_parking:
             # nothing to be done
             pass
         elif not we_should_park and we_are_parking:
-            enter_resume_task_into_schedule()
+            fake_enter_resume_task_into_schedule(credentials, current_time)
             we_are_parking = False
         elif not we_should_park and not we_are_parking:
             # nothing to be done
@@ -59,24 +69,6 @@ def main(**kwargs):
             # there are only 4 combinations so this else should never happen
             raise Exception('we should never reach this line!')
 
-
-def fake_fetch_rain_sensor_update(current_time):
-    '''fake fetch new rain sensor data from tonights AUX file.
-
-    find the correct AUX file, based on the current time and read the
-    correct line from the file, i.e. the line which is just a bit younger
-    than the current time.
-    '''
-    return None
-
-def fake_fetch_wind_sensor_update(current_time):
-    '''fetch new wind sensor data from tonights AUX file.
-
-    find the correct AUX file, based on the current time and read the
-    correct line from the file, i.e. the line which is just a bit younger
-    than the current time.
-    '''
-    return None
 
 
 def fake_enter_suspend_task_into_schedule(current_time):
