@@ -6,9 +6,9 @@ DB, in order to automatically park FACT in case of adverse weather conditions
 Usage:
     auto_park <base_path>
 '''
+import time
 from docopt import docopt
 from datetime import datetime
-
 
 def main(**kwargs):
     credentials = read_credentials_from_config_file()
@@ -43,6 +43,8 @@ def main(**kwargs):
         else:
             # there are only 4 combinations so this else should never happen
             raise Exception('we should never reach this line!')
+
+        time.sleep(10)
 
 
 def read_credentials_from_config_file(path=None):
