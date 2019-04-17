@@ -45,9 +45,6 @@ def get_data(input_data):
     return resampled
 
 
-
-#Get data, convert time
-
 def add_column( data, number_of_steps = 10):
 
     rains =[]
