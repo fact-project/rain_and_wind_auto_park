@@ -45,16 +45,15 @@ def get_data(input_data):
     return resampled
 
 
-def add_column( data, number_of_steps = 10):
-
-    rains =[]
+def add_column(data, number_of_steps=10):
+    rains = []
     count_rains = []
     count_drys = []
     count_rainy = 0
     count_dry = 0
 
     for rain in data['rain']:
-        if rain >0:
+        if rain > 0:
             count_rainy += 1
             count_dry = 0
         else:
