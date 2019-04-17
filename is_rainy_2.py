@@ -27,7 +27,8 @@ from matplotlib import interactive
 get_backend()
 interactive(True)
 
-def get_data(input_data ):
+
+def get_data(input_data):
     '''get data and clean it up for operation.
     resample it so that there is one data point per minute.
     '''
@@ -78,13 +79,13 @@ def add_column( data, number_of_steps = 10):
     #data['rainchange_timing'] = np.where(timing['rain_change']== True, True, False)
     return data
 
+
 def timing(data):
-
-
     timing = pd.DataFrame()
     timing['rain_sum'] = data.rainy_no_counter.resample('40min').sum()
     timing['rain_change'] = np.where(timing['rain_sum'] > 10, True, False)
     return timing
+
 
 def changes(data, new_interval = 'h'):
     '''
@@ -100,8 +101,6 @@ def changes(data, new_interval = 'h'):
     changes = pd.DataFrame()
     changes['change_per_hour'] = data.value_change.resample(new_interval).sum()
     return changes
-
-
 
 
 def plots(data, changes, timing, start_time  , end_time   ):
@@ -141,7 +140,6 @@ def plots(data, changes, timing, start_time  , end_time   ):
     plt.show(block=True)
 
 
-
 def main(input_data, number_of_steps, start_time  , end_time ):
     '''Run all the functions above to obtain plots
     '''
@@ -150,8 +148,6 @@ def main(input_data, number_of_steps, start_time  , end_time ):
     changes_data = changes(final_data)
     timing_data = timing(final_data)
     plots(final_data, changes_data, timing_data, start_time, end_time)
-
-
 
 
 if __name__ == "__main__":
