@@ -2,7 +2,7 @@
 '''
 Program to create dataframe with 'rain' column that is True when rain >0
 also creates a dataframe 'changes' that keeps track of how often this column changes
-Plots these columns. 
+Plots these columns.
 
 
 <input_data>   for example "foo.h5"
@@ -75,13 +75,28 @@ def add_column( data, number_of_steps = 10):
     data['count_drys'] = count_drys
 
     data['rains2'] = (data['count_rains']>= number_of_steps) | (data['count_drys'] < number_of_steps)
+    data['rains4'] = (data['count_rains']>= number_of_steps) & (data['count_drys'] < number_of_steps)
+    data['rainy_no_counter'] = np.where(data['rain']>0, True, False)
+    data['rainy_rolling_sum'] = data.rainy_no_counter.rolling(40).sum()
+    data['rains5'] = np.where(data['rainy_rolling_sum'] >10, True,False)
+
+
+    #data['rainchange_timing'] = np.where(timing['rain_change']== True, True, False)
     return data
+
+def timing(data):
+
+
+    timing = pd.DataFrame()
+    timing['rain_sum'] = data.rainy_no_counter.resample('40min').sum()
+    timing['rain_change'] = np.where(timing['rain_sum'] > 10, True, False)
+    return timing
 
 def changes(data, new_interval = 'h'):
     '''
     A new dataframe that keeps a record of the changes in the rain parameter.
     '''
-    rain_values = data['rains2'].values
+    rain_values = data['rains5'].values
     copied_values = np.zeros_like(rain_values)
     copied_values[0] = rain_values[0]
     copied_values[1:] = rain_values[:-1]
@@ -94,26 +109,41 @@ def changes(data, new_interval = 'h'):
 
 
 
-def plots(data, changes, start_time  , end_time   ):
+
+def plots(data, changes, timing, start_time  , end_time   ):
     ''' Plot Data to verify
     '''
     #sel = slice('2018-10-19 00:00', '2018-10-21 00:00')
     sel = slice(start_time, end_time)
-    plt.subplot(2,1,1)
+    plt.subplot(3,1,1)
     plt.plot(data[sel].rain - 100, '.:', label='rain - 100')
     plt.plot(data[sel].count_rains, '.:', label='count_rains')
     plt.plot(data[sel].count_drys, '.:', label='count_drys')
-    plt.plot((data[sel].rains2+1)*20000,'.:', label = 'rains2')
+    plt.plot((data[sel].rains4+1)*600,'.:', label = 'rains4')
+    plt.plot((data[sel].rains2+1)*600,'.:', label = 'rains2')
+#    plt.plot((data[sel].rainy_no_counter+1)*800,'.:', label = 'rainy no counter')
+    plt.plot((data[sel].rains5+1)*800,'.:', label = 'rains5 Rolling')
+
+#    plt.plot((data[sel].rainchange_timing+1)*1000, '.:', label = 'rain change timing')
+
+#
+
     plt.grid()
     plt.legend()
     plt.title("Rainy Days and Counters")
-    plt.subplot(2,1,2)
-    #plt.plot(changes[sel].change_per_hour,'.:', label='changes per hour')
-    plt.hist(changes[sel].change_per_hour, log=True, bins =np.arange(10)-0.5, facecolor='g')
+    plt.subplot(3,1,2)
+    plt.plot(changes[sel].change_per_hour,'.:', label='changes per hour')
+    #plt.hist(changes[sel].change_per_hour, log=True, bins =np.arange(10)-0.5, facecolor='g')
     ## , histtype='step'
     plt.grid()
     plt.legend()
     plt.title("Number of changes per Hour")
+
+    plt.subplot(3,1,3)
+    #plt.plot(timing[sel].rain_change,'.:', label = 'Changes every 10 min')
+    #plt.hist(timing[sel].rain_sum, log= True, bins =40)
+    plt.hist(data[sel].rainy_rolling_sum, log = True, bins = 40)
+    plt.grid()
     plt.show(block=True)
 
 
@@ -124,7 +154,8 @@ def main(input_data, number_of_steps, start_time  , end_time ):
     initial_data = get_data(input_data)
     final_data = add_column(initial_data, number_of_steps)
     changes_data = changes(final_data)
-    plots(final_data, changes_data, start_time, end_time)
+    timing_data = timing(final_data)
+    plots(final_data, changes_data, timing_data, start_time, end_time)
 
 
 
