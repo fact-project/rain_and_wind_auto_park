@@ -34,7 +34,7 @@ def get_data(input_data):
     '''
 
     stuff = pd.read_hdf(input_data)
-    stuff['good_time'] = pd.to_datetime(stuff.Time*24*60*60*1e9)
+    stuff['good_time'] = pd.to_datetime(stuff.Time, unit='D')
     stuff.set_index('good_time', inplace=True)
     stuff.sort_index(inplace=True)
     del stuff['QoS']
