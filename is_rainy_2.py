@@ -81,7 +81,7 @@ def add_column(data, number_of_steps=10):
 def timing(data):
     timing = pd.DataFrame()
     timing['rain_sum'] = data.rainy_no_counter.resample('40min').sum()
-    timing['rain_change'] = np.where(timing['rain_sum'] > 10, True, False)
+    timing['rain_change'] = timing['rain_sum'] > 10
     return timing
 
 
