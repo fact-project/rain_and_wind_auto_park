@@ -18,15 +18,9 @@ Options:
   -h --help     Show this screen.
   --version     Show version.
 '''
-
-
-
-import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from astropy.table import Table
-import astropy
 from docopt import docopt
 from matplotlib import get_backend
 from matplotlib import interactive
