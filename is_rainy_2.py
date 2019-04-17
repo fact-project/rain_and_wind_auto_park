@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 '''
 Program to create dataframe with 'rain' column that is True when rain >0
-also creates a dataframe 'changes' that keeps track of how often this column changes
-Plots these columns.
+also creates a dataframe 'changes' that keeps track of how often this column
+changes. Plots these columns.
 
 
 <input_data>   for example "foo.h5"
