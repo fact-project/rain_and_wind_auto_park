@@ -46,7 +46,6 @@ def get_data(input_data):
 
 
 def add_column(data, number_of_steps=10):
-    rains = []
     count_rains = []
     count_drys = []
     count_rainy = 0
