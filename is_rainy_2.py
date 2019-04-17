@@ -74,7 +74,7 @@ def add_column(data, number_of_steps=10):
     )
     data['rainy_no_counter'] = np.where(data['rain'] > 0, True, False)
     data['rainy_rolling_sum'] = data.rainy_no_counter.rolling(40).sum()
-    data['rains5'] = np.where(data['rainy_rolling_sum'] > 10, True, False)
+    data['rains5'] = data['rainy_rolling_sum'] > 10
     return data
 
 
