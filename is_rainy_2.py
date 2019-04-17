@@ -64,14 +64,17 @@ def add_column(data, number_of_steps=10):
     data['count_rains'] = count_rains
     data['count_drys'] = count_drys
 
-    data['rains2'] = (data['count_rains']>= number_of_steps) | (data['count_drys'] < number_of_steps)
-    data['rains4'] = (data['count_rains']>= number_of_steps) & (data['count_drys'] < number_of_steps)
-    data['rainy_no_counter'] = np.where(data['rain']>0, True, False)
+    data['rains2'] = (
+        (data['count_rains'] >= number_of_steps) |
+        (data['count_drys'] < number_of_steps)
+    )
+    data['rains4'] = (
+        (data['count_rains'] >= number_of_steps) &
+        (data['count_drys'] < number_of_steps)
+    )
+    data['rainy_no_counter'] = np.where(data['rain'] > 0, True, False)
     data['rainy_rolling_sum'] = data.rainy_no_counter.rolling(40).sum()
-    data['rains5'] = np.where(data['rainy_rolling_sum'] >10, True,False)
-
-
-    #data['rainchange_timing'] = np.where(timing['rain_change']== True, True, False)
+    data['rains5'] = np.where(data['rainy_rolling_sum'] > 10, True, False)
     return data
 
 
