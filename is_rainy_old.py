@@ -77,20 +77,45 @@ def add_column( data, number_of_steps = 10):
     data['rains2'] = (data['count_rains']>= number_of_steps) | (data['count_drys'] < number_of_steps)
     data['rains4'] = (data['count_rains']>= number_of_steps) & (data['count_drys'] < number_of_steps)
     data['rainy_no_counter'] = np.where(data['rain']>0, True, False)
-    data['rainy_rolling_sum'] = data.rainy_no_counter.rolling(40).sum()
+    data['rainy_rolling_sum'] = data.rainy_no_counter.rolling(40).sum().fillna(0)
+    #data['rainy_rolling_sum'] = data['rainy_rolling_sum'].fillna(0)
     data['rains5'] = np.where(data['rainy_rolling_sum'] >10, True,False)
-
-
     #data['rainchange_timing'] = np.where(timing['rain_change']== True, True, False)
     return data
 
-def timing(data):
 
+def hyst(data, low=5, high=10):
+    col = data['rainy_rolling_sum']
+    rains5 = data['rains5']
+    rain_hyst = []
+    #clear = (col.iloc[i] <= low) | (col.iloc[i]>= high)
+    for i in range(len(col)-1):
+        if col.iloc[i] <= low:
+            rain_hyst.append(False)
+        elif col.iloc[i] >= high:
+            rain_hyst.append(True)
+        elif (col.iloc[i] >= low) & (col.iloc[i] <= high):
+            rain_hyst.append(3)
+        else:
+            print("enteresan!")
+    for i,bool in enumerate(rain_hyst):
+        if bool == 3:
+            rain_hsyt[i] = rain_hyst[i-1]
+        else:
+            pass
+    data["hysteresis_rain"] = rain_hyst
+
+    return data
+
+
+'''
+def timing(data):
 
     timing = pd.DataFrame()
     timing['rain_sum'] = data.rainy_no_counter.resample('40min').sum()
     timing['rain_change'] = np.where(timing['rain_sum'] > 10, True, False)
     return timing
+'''
 
 def changes(data, new_interval = 'h'):
     '''
@@ -116,17 +141,18 @@ def plots(data, changes, timing, start_time  , end_time   ):
     #sel = slice('2018-10-19 00:00', '2018-10-21 00:00')
     sel = slice(start_time, end_time)
     plt.subplot(3,1,1)
-    plt.plot(data[sel].rain - 100, '.:', label='rain - 100')
-    plt.plot(data[sel].count_rains, '.:', label='count_rains')
-    plt.plot(data[sel].count_drys, '.:', label='count_drys')
-    plt.plot((data[sel].rains4+1)*600,'.:', label = 'rains4')
-    plt.plot((data[sel].rains2+1)*600,'.:', label = 'rains2')
+
+    #plt.plot(data[sel].rain - 1000, '.:', label='rain - 100')
+    #plt.plot(data[sel].count_rains, '.:', label='count_rains')
+    #plt.plot(data[sel].count_drys, '.:', label='count_drys')
+    #plt.plot((data[sel].rains4+1)*10000,'.:', label = 'rains4')
+    #plt.plot((data[sel].rains2+1)*5000,'.:', label = 'rains2')
+    plt.plot((data[sel].rainy_rolling_sum+1)*1000,'.:', label = 'rolling sum')
 #    plt.plot((data[sel].rainy_no_counter+1)*800,'.:', label = 'rainy no counter')
-    plt.plot((data[sel].rains5+1)*800,'.:', label = 'rains5 Rolling')
+    plt.plot((data[sel].rains5+1)*20000,'.:', label = 'rains5 Rolling')
+    plt.title("Rains5 and Rainy rolling sum")
 
 #    plt.plot((data[sel].rainchange_timing+1)*1000, '.:', label = 'rain change timing')
-
-#
 
     plt.grid()
     plt.legend()
@@ -143,6 +169,7 @@ def plots(data, changes, timing, start_time  , end_time   ):
     #plt.plot(timing[sel].rain_change,'.:', label = 'Changes every 10 min')
     #plt.hist(timing[sel].rain_sum, log= True, bins =40)
     plt.hist(data[sel].rainy_rolling_sum, log = True, bins = 40)
+    plt.title("Rainy Rolling Sum Histogram")
     plt.grid()
     plt.show(block=True)
 
@@ -155,6 +182,7 @@ def main(input_data, number_of_steps, start_time  , end_time ):
     final_data = add_column(initial_data, number_of_steps)
     changes_data = changes(final_data)
     timing_data = timing(final_data)
+    hyst_data = hyst(final_data)
     plots(final_data, changes_data, timing_data, start_time, end_time)
 
 
@@ -171,6 +199,7 @@ if __name__ == "__main__":
         end_time=arguments['<end_time>'],
     )
 
+### Execute as
 
 '''
 initial_data = get_data()
