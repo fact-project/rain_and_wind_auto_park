@@ -1,18 +1,144 @@
-''' this needs a doc-string
+''' functions to interact with FACT scheduling DB
 
-for testing do:
+The scheduling DB contains a table behind this website:
+    https://www.fact-project.org/schedule/
 
-CREATE TABLE rain_and_wind_test_schedule_002 LIKE factdata.Schedule;
-INSERT INTO rain_and_wind_test_schedule_002 SELECT * FROM factdata.Schedule;
+In order to suspend or resume the FACT observation for some time use
+these functions:
 
+ * insert_suspend_task_into_table_now(now, name, engine)
+ * insert_resume_task_into_table_now(now, name, engine)
+
+In order to create one or many engines, just write the connection
+credentials into a YAML (text) file like this:
+
+engine_name: mysql+pymysql://user:password@host/db_name
+
+Make sure to never commit this file into version control (git) since
+login credentials should never be stored somewhere on a public server.
+
+and then create the engine like:
+
+    engine = make_engines(path)['engine_name']
+
+Depending on use-case one might need different engines, like sandbox or
+factread.
+
+
+For testing these functions you might want to create a copy of the real
+Schedule table into the sandbox database. For this the function
+`make_copy_for_testing()` can be used.
+
+Finally in order to see, if the functions worked as expected,
+it is convenient to look at the last N rows of the schedule table.
+For this the function `show_last_n_rows(table_name, engine, n)`
+should be convenient.
+
+There is also a Jupyter notebook called database_example.ipynb
+which can be used to explore these functions.
 '''
-import yaml
 from contextlib import contextmanager
-from sqlalchemy import create_engine
 from datetime import timedelta, datetime
+import yaml
+from sqlalchemy import create_engine
 import pandas as pd
 
+
+def insert_suspend_task_into_table_now(
+        now,
+        table_name,
+        engine,
+):
+    '''insert suspend task `now` into table with `table_name`
+    using `engine` to connect to DB server.
+
+    in addition to inserting the suspend task right now, it will also
+    insert an additional resume task after the next shutdown.
+
+    It will also remove all pre-existing suspend and resume tasks between
+    now and the next noon (which is astronomers end of day.)
+
+    Takes ~1.3 sec.
+
+    Parameters:
+    -----------
+    now: datetime object
+        time where suspend task should be entered into schedule
+    table_name:  str
+        name of table to write into should be "Schedule" unless during tests
+    engine: sqlalchemy.Engine
+        engine instance used to connect to DB
+    '''
+    measurement_type_names = gather_measurement_type_name_to_key_dict(engine)
+
+    with generic(now, table_name, engine) as tasks:
+        add_suspend_to_tasks_in_place(tasks, now, measurement_type_names)
+
+
+def insert_resume_task_into_table_now(
+        now,
+        table_name,
+        engine,
+):
+    '''insert resume task `now` into table with `table_name`
+    using `engine` to connect to DB server.
+
+    in addition to inserting the resume task right now, it will also remove
+    the already existing resume task, which should be coming after the next
+    shutdown. It does this by removing all kinds of pre-existing suspend or
+    resume tasks between now and next noon (which is astronomers end of day).
+
+    Takes ~1.3 sec.
+
+    Parameters:
+    -----------
+    now: datetime object
+        time where suspend task should be entered into schedule
+    table_name:  str
+        name of table to write into should be "Schedule" unless during tests
+    engine: sqlalchemy.Engine
+        engine instance used to connect to DB
+    '''
+    measurement_type_names = gather_measurement_type_name_to_key_dict(engine)
+
+    with generic(now, table_name, engine) as tasks:
+        put_resume_now_in_place(tasks, now, measurement_type_names)
+
+
+def make_copy_for_testing(
+        engine,
+        copy_name='rain_and_wind_test_schedule',
+        original_name='factdata.Schedule',
+):
+    '''copy table for testing'''
+    orig = original_name
+    copy = copy_name
+    with connect(engine) as conn:
+        conn.execute(f'DROP TABLE IF EXISTS {copy}')
+        conn.execute(f'CREATE TABLE {copy} LIKE {orig}')
+        conn.execute(f'INSERT INTO {copy} SELECT * FROM {orig}')
+    return copy_name
+
+
+def show_last_n_rows(table_name, engine, n=13):
+    '''convenience function to look at "factdata.Schedule" or copies of it'''
+    return pd.read_sql_query(
+        f'''
+        SELECT fStart, fScheduleID, fUser, fSourceName, fMeasurementTypeName
+        FROM {table_name}
+        INNER JOIN factdata.MeasurementType
+        ON {table_name}.fMeasurementTypeKey =
+            factdata.MeasurementType.fMeasurementTypeKey
+        LEFT JOIN factdata.Source
+        ON {table_name}.fSourceKey = factdata.Source.fSourceKEY
+        order by fStart desc limit {n}
+        ''',
+        engine
+    ).set_index('fStart').sort_index()
+
+
 def make_engines(path='db_credentials.yml'):
+    '''read yml file from `path` and return dict of `sqlalchemy.Engine`s'''
     db_credentials = yaml.load(open(path, 'r'))
     return {
         name: create_engine(cred)
@@ -20,8 +146,14 @@ def make_engines(path='db_credentials.yml'):
     }
 
 
+# ----------------------------------------------------------------------------
+# ----- below this line there are the ugly internals of this module ----------
+# ----------------------------------------------------------------------------
+
+
 @contextmanager
 def connect(engine):
+    '''contect manager to open and close connection'''
     connection = engine.connect()
     yield connection
     connection.close()
@@ -43,13 +175,6 @@ def connect_and_lock(engine, table_name):
         connection.execute("UNLOCK TABLES")
 
 
-def select_all_from_locked_table(engine, table_name):
-    with connect_and_lock(engine, table_name) as connection:
-        result = connection.execute(f"SELECT * FROM {table_name}")
-        for row in result:
-            yield row
-
-
 def select_all_from_table(engine, table_name):
     with connect(engine) as connection:
         result = connection.execute(f"SELECT * FROM {table_name}")
@@ -58,7 +183,6 @@ def select_all_from_table(engine, table_name):
 
 
 def gather_measurement_type_name_to_key_dict(engine):
-    # ~134 ms
     measurement_type_names = {}
     for row in select_all_from_table(engine, 'factdata.MeasurementType'):
         name = row['fMeasurementTypeName']
@@ -198,18 +322,7 @@ def generic(
         insert_rows_into_table(tasks, table_name, connection)
 
 
-def insert_suspend_task_into_table_now(
-    now,
-    table_name,
-    engine,
-):
-    measurement_type_names = gather_measurement_type_name_to_key_dict(engine)
-
-    with generic(now, table_name, engine) as tasks:
-        add_suspend_to_tasks(tasks, now, measurement_type_names)
-
-
-def add_suspend_to_tasks(rows, now, measurement_type_names):
+def add_suspend_to_tasks_in_place(rows, now, measurement_type_names):
     '''
     MODIFYIES ROWS IN PLACE
     add a suspend task at the beginning of the task list now
@@ -249,18 +362,7 @@ def add_suspend_to_tasks(rows, now, measurement_type_names):
     rows.append(resume_task)
 
 
-def insert_resume_task_into_table_now(
-    now,
-    table_name,
-    engine,
-):
-    measurement_type_names = gather_measurement_type_name_to_key_dict(engine)
-
-    with generic(now, table_name, engine) as tasks:
-        put_resume_now(tasks, now, measurement_type_names)
-
-
-def put_resume_now(rows, now, measurement_type_names):
+def put_resume_now_in_place(rows, now, measurement_type_names):
     '''
     MODIFYIES ROWS IN PLACE
     add a resume task now into the list of tasks and remove any
@@ -281,36 +383,11 @@ def put_resume_now(rows, now, measurement_type_names):
 
 
 def remove_existing_suspend_resume_in_place(rows, measurement_type_names):
-
-    ids_of_suspend_and_resume_tasks = sorted(
-        [
-            i for i, row in enumerate(rows)
-            if row['fMeasurementTypeKey']
-            in (
-                measurement_type_names['Resume'],
-                measurement_type_names['Suspend'],
-            )
-        ],
-        reverse=True
-    )
-
-    # remove these ids from the list
-    # in reverted order so the ids stay valid
-    for id_ in ids_of_suspend_and_resume_tasks:
-        rows.pop(id_)
-
-
-def show_last_n_rows(TABLE, engine, n=13):
-    return pd.read_sql_query(
-        f'''
-        SELECT fStart, fScheduleID, fUser, fSourceName, fMeasurementTypeName
-        FROM {TABLE}
-        INNER JOIN factdata.MeasurementType
-        ON {TABLE}.fMeasurementTypeKey =
-            factdata.MeasurementType.fMeasurementTypeKey
-        LEFT JOIN factdata.Source
-        ON {TABLE}.fSourceKey = factdata.Source.fSourceKEY
-        order by fStart desc limit {n}
-        ''',
-        engine
-    ).set_index('fStart').sort_index()
+    # we need to iterate in reversed order so the indices stay valid
+    # while modifying in place
+    for i, row in reversed(list(enumerate(rows))):
+        if row['fMeasurementTypeKey'] in (
+            measurement_type_names['Resume'],
+            measurement_type_names['Suspend'],
+        ):
+            rows.pop(i)
