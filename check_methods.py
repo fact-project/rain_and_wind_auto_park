@@ -6,13 +6,14 @@ Program to check which method is right.
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-import is_rainy as rn
+import autopark as auto
+#import is_rainy as rn
 
 
 def get_interval_length(data):
     '''get interval length in time
     '''
-    col = data['hysteresis_rain']
+    col = data['hysteresis']
     list_of_intervals = []
     true = 0
     trues = []
@@ -30,11 +31,28 @@ def get_interval_length(data):
     #turn into series so that you have no bs __name_
     #take difference of each value
     #get rid of first value, doesn't make sense
-    interval_widths = pd.Series(time_of_edges).diff()[1:]
+    interval_widths = pd.DataFrame()
+    interval_widths['date_index'] = time_of_edges
+    interval_widths.set_index('date_index')
+    interval_widths['dates'] = time_of_edges
+
+    #trying = pd.Series(np.where(interval_widths.diff()<np.timedelta64(10, 's')))
+    #pd.Series(time_of_edges).diff()[1:]
     #But this is datatime, not so good for histograms! Can;t histogram timestamps!!!
-    interval_widths_inmin = interval_widths.values.astype('f')/1e9/60
+    #interval_widths_inmin = list(interval_widths.values.astype('f')/1e9/60)
+    #trial = interval_widths.astype('f')/1e9/60
+    #interval_widths.to_frame()
+    #interval_widths['in_min'] = interval_widths_inmin
     #1e9 is because iti s in nanosecs , 60 is for minutes!!
-    return interval_widths_inmin
+    #return interval_widths
+    #time_of_edges
+    #return interval_widths_inmin
+    small_ntvs = pd.DataFrame(np.where(interval_widths['dates'].diff() < np.timedelta64(10,'m'), True, False))
+    small_intvs = interval_widths[interval_widths['dates'].diff() < np.timedelta64(10,'m')]
+    return small_intvs
+
+
+
 
 
 
@@ -83,17 +101,27 @@ def plot(intervals ):
 
 
 
-data1 = rn.get_data("updated_rain_data.h5" )
-## I'm adding crazy columns
-data1= rn.add_column( data1,  10)
-data1 = rn.hyst(data1)
-### Time to see how well these columns work!
-#This shows number of changes per hour
-change_data = rn.changes(data1, new_interval = 'h')
-#With time
-interv_list = get_interval_length(data1)
-#List of lengths of intervals
-interv = intervals(data1)
-get_no_small_intervals(interv)
-plot(interv)
-#print(interv_list[2:15])
+data1 = auto.get_data("updated_rain_data.h5" )
+column , threshold = auto.get_column( data1)
+rol_column = auto.calculate_rolling_sum(data1, column, threshold,  window_size = 40)
+# Below, hyst takes in the rolling sum and
+data1['hysteresis'] = auto.calculate_hyst(rol_column, hyst_min = 10, hyst_window =7)
+data1['rolling_sum'] = rol_column
+
+no_int = get_interval_length(data1)
+print(no_int)
+
+
+# ## I'm adding crazy columns
+# #data1= auto.add_column( data1,  10)
+# data1 = auto.calculate_hyst(data1)
+# ### Time to see how well these columns work!
+# #This shows number of changes per hour
+# change_data = rn.changes(data1, new_interval = 'h')
+# #With time
+# interv_list = get_inte`rval_length(data1)
+# #List of lengths of intervals
+# interv = intervals(data1)
+# get_no_small_intervals(interv)
+# plot(interv)
+# #print(interv_list[2:15])

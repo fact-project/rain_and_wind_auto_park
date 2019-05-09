@@ -4,10 +4,15 @@ import numpy as np
 from astropy.table import Table
 import astropy
 import matplotlib.pyplot as plt
-get_ipython().run_line_magic('matplotlib', '')
+from matplotlib import interactive
+from matplotlib import get_backend
+get_backend()
+interactive(True)
+#from IPython import get_ipython
+#get_ipython().run_line_magic('matplotlib', '')
 
 
-stuff = pd.read_hdf('data.h5')
+stuff = pd.read_hdf('updated_rain_data.h5')
 # just to be sure!
 
 stuff['good_time'] = pd.to_datetime(stuff.Time * 24 * 60 * 60 * 1e9)
@@ -73,3 +78,5 @@ plt.plot(stuff[sel].count_rains, '.:', label='count_rains')
 plt.plot(stuff[sel].count_drys, '.:', label='count_drys')
 plt.grid()
 plt.legend()
+plt.show(block=True)
+#plt.savefig('trial_april1st.png')
