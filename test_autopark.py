@@ -2,14 +2,17 @@
 ### PLOT 2D PLOTS TO DETERMINE THE BEST PARAMETERS:
 # Hysteresis window size, rolling window size, hysteresis minimum
 
-import autopark as auto
+import autopark2 as auto
 import matplotlib.pyplot as plt
 import numpy as np
 
 
-windows = np.array([20, 30, 40, 50, 60])
-minimums = np.array([0, 5, 10, 15,20 ])
-hyst_windows = np.array([0,2.5,5,7.5,10])
+windows = np.array([30,45,60])
+#[20, 30, 40, 50, 60])
+#[5, 10,20, 30, 40]
+minimums = np.array([0,1,2,3,4])
+#[0, 5, 10, 15, 20])
+hyst_windows = np.array([0, 1, 2,3,4])
 
 
 result = np.zeros((len(minimums), len(hyst_windows)))
@@ -17,8 +20,9 @@ result = np.zeros((len(minimums), len(hyst_windows)))
 
 
 for w,window in enumerate(hyst_windows):
+#for w,window in enumerate(windows):
          for m,min in enumerate(minimums):
-             result[m,w] = auto.main("updated_rain_data.h5","2018-03-01", "2019-03-05", 40, min, window )
+             result[m,w] = auto.main("all_wind_data.h5","2018-01-01", "2019-03-30", 60, min, window )
 
 
 
@@ -37,21 +41,23 @@ for i in range(len(minimums)):
         text = ax.text(j , i, result[i,j], ha = "center", va="center", color = "w")
 
 
-ax.set_title("Number of Intervals <= 20 minutes")
+ax.set_title("Wind: Number of Intervals <= 10 minutes")
 ax.set_xlabel("Hysteresis Window")
-ax.set_ylabel("Minimum value of the Hysteresis Interval")
+ax.set_ylabel("Minimum value of the Hysteresis Region")
 fig.tight_layout()
 plt.show(block = True)
 
 
 
 
-
-###########################3
+##############################################################
+###########################
 # plt.pcolor(windows, minimums, result)
-# plt.title("Number of Small Intervals")
-# plt.xlabel("window size")
-# plt.ylabel("Hysteresis Minimum")
+# plt.title("Number of Small Intervals", fontsize = 45)
+# plt.xlabel("window size", fontsize = 40)
+# plt.ylabel("Hysteresis Minimum", fontsize = 40)
+# plt.set_xticks(fontsize = 30)
+# plt.set_yticks(fontsize = 30)
 # plt.colorbar()
 # plt.show(block=True)
 
