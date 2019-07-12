@@ -7,12 +7,14 @@ Plots these columns.
 
 
 <input_data>   for example "foo.h5"
-<number_of_steps>  the number of data points before the rain column updates
 <start_time>  specify start of time interval
 <end_time>  specify end of time interval
+<window_size> specify the number of minutes for the rolling sum
+<hyst_min>
+<hyst_max>
 
 Usage:
-  is_rainy.py <input_data> <number_of_steps> <start_time> <end_time>
+  is_rainy.py <input_data> <start_time> <end_time> <window_size> <hyst_min> <hyst_max>
 
 
 Options:
@@ -54,7 +56,7 @@ def get_data(input_data ):
 
 #Get data, convert time
 
-def add_column( data, number_of_steps = 10):
+def add_column( data,  window_size, number_of_steps = 10):
     '''Add different methods to decide on "true" or "false" for rain
     '''
     rains =[]
@@ -80,35 +82,35 @@ def add_column( data, number_of_steps = 10):
     data['rains4'] = (data['count_rains']>= number_of_steps) & (data['count_drys'] < number_of_steps)
     data['rainy_no_counter'] = np.where(data['rain']>0, True, False)
     ### the rolling sum below has 39 "nan" items in the beginning, we get rid of those.
-    data['rainy_rolling_sum'] = data.rainy_no_counter.rolling(40).sum().fillna(0)
+    data['rainy_rolling_sum'] = data.rainy_no_counter.rolling(window_size).sum().fillna(0)
     #data['rainy_rolling_sum'] = data['rainy_rolling_sum'].fillna(0)
     data['rains5'] = np.where(data['rainy_rolling_sum'] >10, True,False)
     #data['rainchange_timing'] = np.where(timing['rain_change']== True, True, False)
     return data
 
 
-def hyst(data, low=5, high=10):
+def calculate_hyst(col, hyst_min, hyst_max):
     '''Double windows on y axis using the rolling sum from above
     '''
-    col = data['rainy_rolling_sum']
-    rain_hyst = []
+#    col = data['rainy_rolling_sum']
+    hyst = []
     for i in col:
-        if i <= low:
-            rain_hyst.append(False)
-        elif i >= high:
-            rain_hyst.append(True)
-        elif (i >= low) & (i <= high):
-            rain_hyst.append(3)
+        if i <= hyst_min:
+            hyst.append(False)
+        elif i >= hyst_max:
+            hyst.append(True)
+        elif (i >= hyst_min) & (i <= hyst_max):
+            hyst.append(3)
         else:
             print("enteresan!")
-    for i,bool in enumerate(rain_hyst):
+    for i,bool in enumerate(hyst):
         if bool == 3:
-            rain_hyst[i] = rain_hyst[i-1]
+            hyst[i] = hyst[i-1]
         else:
             pass
-    data["hysteresis_rain"] = rain_hyst
-
-    return data
+    #data["hysteresis_rain"] = rain_hyst
+    new_column = pd.Series( hyst, index = col.index )
+    return new_column
 
 
 
@@ -210,13 +212,13 @@ def plots(data, changes, start_time  , end_time   ):
 
 
 
-
-def main(input_data, number_of_steps, start_time  , end_time ):
+def main(input_data, start_time  , end_time , window_size, hyst_min, hyst_max ):
     '''Run all the functions above to obtain plots
     '''
     initial_data = get_data(input_data)
-    final_data = add_column(initial_data, number_of_steps)
-    final_data = hyst(final_data)
+    final_data = add_column(initial_data, window_size)
+    # Below, hyst takes in the rolling sum and
+    final_data['hysteresis_rain'] = calculate_hyst(final_data['rainy_rolling_sum'], hyst_min, hyst_max)
     changes_data = changes(final_data)
 
     plots(final_data, changes_data,  start_time, end_time)
@@ -230,17 +232,12 @@ if __name__ == "__main__":
     print(arguments)
     main(
         input_data=arguments['<input_data>'],
-        number_of_steps=int(arguments['<number_of_steps>']),
+        #number_of_steps=int(arguments['<number_of_steps>']),
         start_time=arguments['<start_time>'],
         end_time=arguments['<end_time>'],
+        window_size=int(arguments['<window_size>']),
+        hyst_min=int(arguments['<hyst_min>']),
+        hyst_max=int(arguments['<hyst_max>']),
     )
 
 ### Execute as
-
-'''
-initial_data = get_data()
-final_data = add_column(initial_data)
-plot_rainy(final_data)
-changes_data = changes(final_data)
-plot_changes(changes_data)
-'''
