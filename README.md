@@ -1,4 +1,5 @@
-# rain_and_wind_auto_park
+# rain_and_wind_auto_park [![Build Status](https://travis-ci.org/fact-project/rain_and_wind_auto_park.svg?branch=master)](https://travis-ci.org/fact-project/rain_and_wind_auto_park)
+
 A continously running process, which modifies the FACT schedule in order to park in case of adverse weather conditions
 
 ----
@@ -52,3 +53,4 @@ Get the file `hadron_rate.h5` somehow .. Dominik has to find out how again!!!
  - maybe progress bar for autopark_quantiles?
  - the number of total hours or good hours should maybe be stored in a file.
  - for a study with different windows
+
