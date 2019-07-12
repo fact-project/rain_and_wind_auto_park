@@ -31,8 +31,6 @@ from docopt import docopt
 from matplotlib import get_backend
 from matplotlib import interactive
 from datetime import timedelta
-get_backend()
-interactive(True)
 
 def get_data(input_data, start_time, end_time ):
     '''get data and clean it up for operation.
