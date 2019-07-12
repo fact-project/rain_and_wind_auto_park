@@ -9,7 +9,7 @@ Can change the window size, hyst min, hyst max below (~line 9 for window size, ~
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import autopark2 as auto
+import autopark_quantiles as auto
 
 
 windows = np.array([20, 30, 40, 50 , 60])
@@ -17,8 +17,8 @@ window = 20
 
 #Get the rain and the wind data both!
 ## Rain data starts from 2018-05-24
-wind = auto.get_data("all_wind_data.h5","2018-05-24", "2019-03-30")
-rain = auto.get_data("updated_rain_data.h5","2018-05-24", "2019-03-30")
+wind = auto.get_data("wind_data.h5","2018-05-24", "2019-03-30")
+rain = auto.get_data("rain_data.h5","2018-05-24", "2019-03-30")
 
     ## New Data! <3
 hadron_rates = pd.read_hdf("hadron_rate.h5")
@@ -31,7 +31,7 @@ runstop = series2.tolist()
 
 lost_good_run_list = []
 for w in windows:
-    for data in [wind,rain]:
+    for data in [wind, rain]:
         type, threshold, name = auto.determine_data_type(data)
         if type == "rain":
             col = data.rain
@@ -53,25 +53,22 @@ for w in windows:
 
     ## Rename the decisions properly
     # We will compare "parked due to rain", "parked due to storm", "actually parked" and "parked due to rain or storm"
-    rain["rain_park"]= rain.park
+    rain["rain_park"] = rain.park
     wind['planned_take_data'] = wind.take_data
-    wind['actual_parked'] =wind.turned_off
+    wind['actual_parked'] = wind.turned_off
 
     ### Decide on wind method Here
-    # method = wind.park
-    method = wind.park_avg_plus_std
-    # method = wind.quantile_park
-    # method = wind.quantile_park2
+    method = wind.quantile_park3
     wind['wind_park'] = method
     ## Wind
 
 
     ## Create a new clean data frame for this comparison
     data_taking = pd.DataFrame(index=data.index)
-    data_taking = data_taking.join(rain.rain_park,how = 'outer')
-    data_taking = data_taking.join(wind.wind_park, how = 'outer')
-    data_taking = data_taking.join(wind.actual_parked, how = 'outer')
-    data_taking = data_taking.join(wind.planned_take_data, how = 'outer')
+    data_taking = data_taking.join(rain.rain_park, how='outer')
+    data_taking = data_taking.join(wind.wind_park, how='outer')
+    data_taking = data_taking.join(wind.actual_parked, how='outer')
+    data_taking = data_taking.join(wind.planned_take_data, how='outer')
 
     data_taking = data_taking[~data_taking.rain_park.isna()]
 
@@ -145,7 +142,7 @@ fig, ax = plt.subplots()
 ax.plot(windows, lost_good_run_list, 'o', label = "lost_good_runs")
 ax.legend(fontsize = 22)
 ax.set_xlabel("Window size (minutes)", fontsize = 22)
-plt.show(block=True)
+fig.savefig("good_runs.png", dpi = 300, figsize = (120,120))
 
 # ### Run quality plot
 # plt.figure(figsize=(12, 4))

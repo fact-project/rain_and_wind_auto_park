@@ -12,7 +12,7 @@ The plots compare quantile methods 90%, 95% and 70%(has smaller window)
 
 
 Usage:
-  autopark_quantiles.py <input_data> <start_time> <end_time> <window_size> <hyst_min> <hyst_window> <outfile_name>
+  autopark_quantiles_centered.py <input_data> <start_time> <end_time> <window_size> <hyst_min> <hyst_window> <outfile_name>
 
 Options:
   -h --help     Show this screen.
@@ -131,7 +131,7 @@ def determine_data_type( data):
 def make_decision( data, col, threshold,  window_size, hyst_min, hyst_window):
     '''Use a rolling sum above threshold to make a decision to park.
     '''
-    data['rolling_sum'] = (col > threshold).rolling(window_size).sum()
+    data['rolling_sum'] = (col > threshold).rolling(min_periods=1, center=True, window=window_size).sum()
     data['park'] =calculate_hyst(data['rolling_sum'], hyst_min,  hyst_window)
     return data
 
@@ -142,15 +142,14 @@ def wind_methods(data, threshold, window_size):
 
 
 
-    data['quantile'] = data.v_max.rolling('1h').quantile(0.95)
+    data['quantile'] = data.v_max.rolling(min_periods=1, center=True, window=60).quantile(0.95)
     data['quantile_park'] = calculate_hyst(data['quantile'], 40, 10)
 
-    data['quantile2'] = data.v_max.rolling('1h').quantile(0.90)
+    data['quantile2'] = data.v_max.rolling(min_periods=1, center=True, window=60).quantile(0.90)
     data['quantile_park2'] = calculate_hyst(data['quantile2'], 40, 10)
 
-    data['quantile3'] = data.v_max.rolling('30min').quantile(0.70)
+    data['quantile3'] = data.v_max.rolling(min_periods=1, center=True, window=30).quantile(0.70)
     data['quantile_park3'] = calculate_hyst(data['quantile3'], 40, 10)
-
 
 
         ## Alternative method for wind:
