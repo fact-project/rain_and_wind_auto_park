@@ -31,7 +31,7 @@ runstop = series2.tolist()
 
 lost_good_run_list = []
 for w in windows:
-    for data in [wind,rain]:
+    for data in [wind, rain]:
         type, threshold, name = auto.determine_data_type(data)
         if type == "rain":
             col = data.rain
@@ -53,25 +53,22 @@ for w in windows:
 
     ## Rename the decisions properly
     # We will compare "parked due to rain", "parked due to storm", "actually parked" and "parked due to rain or storm"
-    rain["rain_park"]= rain.park
+    rain["rain_park"] = rain.park
     wind['planned_take_data'] = wind.take_data
-    wind['actual_parked'] =wind.turned_off
+    wind['actual_parked'] = wind.turned_off
 
     ### Decide on wind method Here
-    # method = wind.park
-    method = wind.park_avg_plus_std
-    # method = wind.quantile_park
-    # method = wind.quantile_park2
+    method = wind.quantile_park3
     wind['wind_park'] = method
     ## Wind
 
 
     ## Create a new clean data frame for this comparison
     data_taking = pd.DataFrame(index=data.index)
-    data_taking = data_taking.join(rain.rain_park,how = 'outer')
-    data_taking = data_taking.join(wind.wind_park, how = 'outer')
-    data_taking = data_taking.join(wind.actual_parked, how = 'outer')
-    data_taking = data_taking.join(wind.planned_take_data, how = 'outer')
+    data_taking = data_taking.join(rain.rain_park, how='outer')
+    data_taking = data_taking.join(wind.wind_park, how='outer')
+    data_taking = data_taking.join(wind.actual_parked, how='outer')
+    data_taking = data_taking.join(wind.planned_take_data, how='outer')
 
     data_taking = data_taking[~data_taking.rain_park.isna()]
 
