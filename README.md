@@ -43,7 +43,7 @@ example
 
 Get the file `hadron_rate.h5` somehow .. Dominik has to find out how again!!!
 
-    python rain_goodruns.py
+    python goodruns.py
 
 
 
