@@ -13,12 +13,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-import autopark2 as auto
+import autopark_quantiles as auto
 
 #Get the rain and the wind data both!
 ## Rain data starts from 2018-05-24
-wind = auto.get_data("all_wind_data.h5","2018-05-24", "2019-03-30")
-rain = auto.get_data("updated_rain_data.h5","2018-05-24", "2019-03-30")
+wind = auto.get_data("all_wind_data.h5", "2018-05-24", "2019-03-30")
+rain = auto.get_data("updated_rain_data.h5", "2018-05-24", "2019-03-30")
 
 
 ##Use Autopark2 for both data sets...
