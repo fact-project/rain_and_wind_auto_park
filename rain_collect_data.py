@@ -5,7 +5,7 @@ Program to collect all RAIN fits files and bundle them up in an h5 file.
 <path_to_aux_folder>   the path where your fact aux file tree starts
 
 Usage:
-  rain_collect_data.py <path_to_aux_folder> <out_file_name>
+  fits_to_h5.py <path_to_aux_folder> <out_file_name> <type_name>
 
 Options:
   -h --help     Show this screen.
@@ -18,13 +18,15 @@ import pandas as pd
 from tqdm import tqdm
 from docopt import docopt
 
-def main(path_to_aux_folder, out_file_name):
+def main(path_to_aux_folder, out_file_name, type_name):
     '''collect all RAIN fits files from `path_to_aux_folder`
     and bundle them into an HDF5 file in `out_file_name`
+
+    type_name should be either "RAIN" or "WEATHER"
     '''
 
     try:
-        glob_expression = path_to_aux_folder + "/*/*/*/*RAIN*"
+        glob_expression = path_to_aux_folder + f"/*/*/*/*{type_name}*"
 
         frame = []
         for path in tqdm(sorted(glob.glob(glob_expression))):
@@ -47,4 +49,5 @@ if __name__ == "__main__":
     main(
         path_to_aux_folder=arguments['<path_to_aux_folder>'],
         out_file_name=arguments['<out_file_name>'],
+        type_name=arguments['<type_name>'],
     )
