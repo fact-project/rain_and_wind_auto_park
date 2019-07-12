@@ -9,7 +9,7 @@ Can change the window size, hyst min, hyst max below (~line 9 for window size, ~
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import autopark2 as auto
+import autopark_quantiles as auto
 
 
 windows = np.array([20, 30, 40, 50 , 60])
@@ -17,8 +17,8 @@ window = 20
 
 #Get the rain and the wind data both!
 ## Rain data starts from 2018-05-24
-wind = auto.get_data("all_wind_data.h5","2018-05-24", "2019-03-30")
-rain = auto.get_data("updated_rain_data.h5","2018-05-24", "2019-03-30")
+wind = auto.get_data("wind_data.h5","2018-05-24", "2019-03-30")
+rain = auto.get_data("rain_data.h5","2018-05-24", "2019-03-30")
 
     ## New Data! <3
 hadron_rates = pd.read_hdf("hadron_rate.h5")
@@ -145,7 +145,7 @@ fig, ax = plt.subplots()
 ax.plot(windows, lost_good_run_list, 'o', label = "lost_good_runs")
 ax.legend(fontsize = 22)
 ax.set_xlabel("Window size (minutes)", fontsize = 22)
-plt.show(block=True)
+fig.savefig("good_runs.png", dpi = 300, figsize = (120,120))
 
 # ### Run quality plot
 # plt.figure(figsize=(12, 4))
