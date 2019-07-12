@@ -6,6 +6,8 @@ Additionally, look at a quality plot for the runs that would be eliminated if th
 Can change the window size, hyst min, hyst max below (~line 9 for window size, ~line 28 for hyst parameters)
 
 """
+from types import SimpleNamespace
+from tqdm import tqdm
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,25 +15,36 @@ import autopark_quantiles as auto
 
 
 windows = np.array([20, 30, 40, 50, 60])
-window = 20
 
 # Get the rain and the wind data both!
 ## Rain data starts from 2018-05-24
 wind = auto.get_data("wind_data.h5", "2018-05-24", "2019-03-30")
 rain = auto.get_data("rain_data.h5", "2018-05-24", "2019-03-30")
 
+def present_results_as_table(results):
+    print(
+        "|| Window size  ||  # Good runs lost || # Parked Runs || % Of parked runs ||"
+    )
+    for r in results:
+        fraction = (r.parked_runs / r.total_runs) * 100
+        print(f"||{r.w}||{r.lost_good_runs}||{r.parked_runs}||{fraction}||"),
+    print(
+        " #############################################################################3"
+    )
+
+
+
 ## New Data! <3
 hadron_rates = pd.read_hdf("hadron_rate.h5")
 quality = hadron_rates.query(
     "on_time > 100 & fZenithDistanceMean < 40 & fRunTypeKey==1 & hadron_rate < 4.8"
 )
-series1 = quality["fRunStart"].astype(str)
-runstart = series1.tolist()
-series2 = quality["fRunStop"].astype(str)
-runstop = series2.tolist()
+runstart = quality["fRunStart"].astype(str).tolist()
+runstop = quality["fRunStop"].astype(str).tolist()
 ##Use Autopark2 for both data sets...
 
 lost_good_run_list = []
+results = []
 for w in windows:
     for data in [wind, rain]:
         type, threshold, name = auto.determine_data_type(data)
@@ -41,15 +54,12 @@ for w in windows:
             hyst_window = 10
         else:
             col = data.v_max
-            data = auto.wind_methods(data, threshold, window)
+            data = auto.wind_methods(data, threshold, w)
             hyst_min = 0
             hyst_window = 2
         data = auto.make_decision(data, col, threshold, w, hyst_min, hyst_window)
-        ## Here cut the morning data. We only need data from observation time
-        ## (The decisions were already made in previous lines using all data)
-        data = data[data["take_data"] == True]
 
-    ## Just to make sure , cut data again
+    # take_data here reflects the planned scheule, so we cut away only daytime data.
     rain = rain[rain.take_data == True]
     wind = wind[wind.take_data == True]
 
@@ -77,23 +87,15 @@ for w in windows:
     data_taking["algorithm_parked"] = data_taking.rain_park | data_taking.wind_park
 
     ###Now calculate total hours...
-    data_taking[data_taking.algorithm_parked == True]
-    # print("###############################################################################")
-    # print("TOTAL NUMBER OF HOURS OF DATA TAKING")
-    ## For the PLANNED number of total_hours
     total_hours_planned = data_taking[data_taking.planned_take_data == True]
     total_hours = (len(total_hours_planned)) / 60
     total_hours_h = (len(data_taking.algorithm_parked)) / 60
-    # print("Planned = ",total_hours, " hours")
 
-    ## For the ACTUAL
-    actual_data_taken = data_taking[data_taking["actual_parked"] == False]
+    actual_data_taken = data_taking[data_taking.actual_parked == False]
     actual_hours = (len(actual_data_taken)) / 60
-    # print("Actual = ",actual_hours, " hours")
 
     algorithm_parked = data_taking[data_taking.algorithm_parked == False]
     algorithm_parked_hours = (len(algorithm_parked)) / 60
-    # print("Algorithm = ",algorithm_parked_hours," hours")
 
     ###############################################################################################################
     ## Data Quality PLOT
@@ -110,56 +112,59 @@ for w in windows:
         else:
             parked.append(False)
 
-    # quality.set_index('fRunStart', inplace = True)
     quality["parked"] = parked
-    # print( " ")
-    # print("###############################################################################")
-    # print("Total Parked runs & Run Quality")
     parked_runs = quality[quality.parked == True].parked.count()
     total_runs = quality.parked.count()
-    # print("Number of runs that were parked is ",parked_runs)
-    # print("Total number of runs is ", total_runs)
-    # print("Total saved is ",(parked_runs/total_runs)*100)
 
     ### GOOD RUNS LOST
-    # lost_good_runs = quality[(quality.hadron_rate >3.5) & (quality.parked == True)].parked.count()
     good_run = quality[(quality.hadron_rate > 3.5) & (quality.parked == True)].fRunStart
     lost_good_runs = good_run.count()
 
     good_run_time = good_run.values
     lost_good_run_list.append(lost_good_runs)
-    print("Good Runs Lost For Window = ", w, ":")
-    print(
-        "|| Window size  ||  # Good runs lost || # Parked Runs || % Of parked runs ||"
-    )
-    print(
-        "||",
-        w,
-        "    || ",
-        lost_good_runs,
-        "      ||   ",
-        parked_runs,
-        "   ||   ",
-        (parked_runs / total_runs) * 100,
-        "   ||",
-    )
+
+    print("window:", w)
     print("Good runs lost are ", good_run)
     print("Times of lost good runs are ", good_run_time)
-    print(
-        " #############################################################################3"
+
+    plt.figure()
+    plt.hist(
+        quality[quality.parked == True]['hadron_rate'],
+        alpha=0.7,
+        bins=np.arange(0, 5, 0.03),
+        label='Parked',
+        color="orange",
+        log=True
     )
+    plt.hist(
+        quality[quality.parked == False]['hadron_rate'],
+        alpha=0.2,
+        bins=np.arange(0, 5, 0.03),
+        label='Taking Data',
+        log=True
+    )
+    plt.title(f"Parked runs {w}min window", fontsize=22)
+    plt.legend( fontsize=18)
+    plt.xlabel('hadron rate (1/s)', fontsize=18)
+    plt.tight_layout()
+    plt.savefig(f"parked_runs_{w}min.png", dpi=300, figsize=(120, 120))
+
+
+
+    results.append(SimpleNamespace(
+        w=w,
+        lost_good_runs=lost_good_runs,
+        parked_runs=parked_runs,
+        total_runs=total_runs,
+
+    ))
+
+present_results_as_table(results)
 
 fig, ax = plt.subplots()
-ax.plot(windows, lost_good_run_list, "o", label="lost_good_runs")
-ax.legend(fontsize=22)
-ax.set_xlabel("Window size (minutes)", fontsize=22)
+ax.plot(windows, lost_good_run_list, "o")
+plt.title("# of lost good runs")
+ax.set_xlabel("Window size (minutes)", fontsize=18)
+plt.tight_layout()
+plt.grid()
 fig.savefig("good_runs.png", dpi=300, figsize=(120, 120))
-
-# ### Run quality plot
-# plt.figure(figsize=(12, 4))
-# plt.hist(quality[quality.parked == True]['hadron_rate'], alpha = 0.7, bins=np.arange(0, 5, 0.03), label='Parked', color = "orange", log = True)
-# plt.hist(quality[quality.parked == False]['hadron_rate'], alpha = 0.2, bins=np.arange(0,5, 0.03), label='Taking Data', log = True)
-# plt.title("Parked runs with the Rain method, 20 minute Window", fontsize = 30)
-# plt.legend( fontsize = 22)
-# plt.xlabel('hadron rate (1/s)', fontsize = 22)
-# plt.show(block = True)
