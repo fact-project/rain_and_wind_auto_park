@@ -12,7 +12,7 @@ The plots compare quantile methods 90%, 95% and 70%(has smaller window)
 
 
 Usage:
-  autopark_quantiles.py <input_data> <start_time> <end_time> <window_size> <hyst_min> <hyst_window>
+  autopark_quantiles.py <input_data> <start_time> <end_time> <window_size> <hyst_min> <hyst_window> <outfile_name>
 
 Options:
   -h --help     Show this screen.
@@ -303,7 +303,7 @@ def get_no_small_intervals(intv_list):
             medium_intervals.append(i)
     return len(small_intervals)
 
-def plots(data, col,  start_time  , end_time  , hyst_min, hyst_window, name ):
+def plots(data, col, start_time, end_time, hyst_min, hyst_window, name, outfile_name):
 
     f, (ax1, ax2) = plt.subplots(nrows =2,sharex = True, figsize = (30,15),gridspec_kw={'height_ratios': [3, 2]} )
     sel = slice(start_time, end_time)
@@ -355,7 +355,7 @@ def plots(data, col,  start_time  , end_time  , hyst_min, hyst_window, name ):
 
 
 #    f.savefig('Wind_gust_Jan_comparison_part2.png', dpi = 300, figsize = (120,120))
-    plt.show(block=True)
+    # plt.show(block=True)
 
 
 ########## more general comparison plots
@@ -412,14 +412,14 @@ def plots(data, col,  start_time  , end_time  , hyst_min, hyst_window, name ):
 #
 #
 #
-# #    f.savefig('Wind_gust_Jan_comparison_part2.png', dpi = 300, figsize = (120,120))
+    f.savefig(outfile_name, dpi = 300, figsize = (120,120))
 #     plt.show(block=True)
 
 
 
 
 
-def main(input_data, start_time  , end_time , window_size , hyst_min, hyst_window):
+def main(input_data, start_time  , end_time , window_size , hyst_min, hyst_window, outfile_name):
     '''Run all the functions above to obtain plots
     '''
     data = get_data(input_data, start_time, end_time)
@@ -434,14 +434,14 @@ def main(input_data, start_time  , end_time , window_size , hyst_min, hyst_windo
     data = make_decision(data, col, threshold, window_size, hyst_min, hyst_window)
 #    print(hyst_min + hyst_window)
     data1 = data[data['take_data'] == True]
-    plots(data1, col,  start_time  , end_time  , hyst_min, hyst_window, name )
+    plots(data1, col, start_time, end_time, hyst_min, hyst_window, name, outfile_name)
 
     interval_lengths = intervals(data1['park'])
-    result =  get_no_small_intervals(interval_lengths)
+    result = get_no_small_intervals(interval_lengths)
     total_hours = (len(data.take_data))/60
     actual_data_taken = data[data['turned_off'] == False]
-    actual_hours = (len(actual_data_taken))
-    print(total_hours)
+    actual_hours = len(actual_data_taken)
+    print("total_hours:", total_hours)
     return result
 
 
@@ -457,5 +457,5 @@ if __name__ == "__main__":
         window_size=int(arguments['<window_size>']),
         hyst_min=int(arguments['<hyst_min>']),
         hyst_window=int(arguments['<hyst_window>']),
-
+        outfile_name=arguments['<outfile_name>']
     )
