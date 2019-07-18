@@ -18,7 +18,6 @@ Options:
   -h --help     Show this screen.
   --version     Show version.
 """
-import time
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -60,7 +59,6 @@ def get_data(path):
 
 
 def join_with_schedules(df):
-    start_ = time.time()
     actual, planned = load_schedules_actual_planned()
     colname_and_schedules = [
         ("planned_observation", planned, ('Startup',), ('Shutdown',)),
@@ -91,8 +89,6 @@ def join_with_schedules(df):
 
         stuff['take_data'] = take_data
         df[colname] = stuff.take_data[df.index]
-
-    print(f'duration: {time.time() - start_:.1f}')
     return df
 
 
