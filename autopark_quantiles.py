@@ -45,9 +45,9 @@ def get_data(input_data):
     df.set_index(pd.to_datetime(df.Time, unit="D"), inplace=True)
     df.sort_index(inplace=True)
     if "rain" in df:
-        return pd.DataFrame(df.rain.resample("min").mean())
+        df = pd.DataFrame(df.rain.resample("min").mean())
     else:
-        return pd.DataFrame(df.v_max.resample("min").mean())
+        df = pd.DataFrame(df.v_max.resample("min").mean())
 
     df = join_with_schedules(df)
     return df
@@ -75,7 +75,6 @@ def join_with_schedules(df):
                 last_startup = x.Index
             if x.fMeasurementTypeName == "Shutdown":
                 df.loc[last_startup : x.Index, colname] = True
-
     return df
 
 
@@ -222,7 +221,7 @@ def plots(data, col, start_time, end_time, hyst_min, hyst_window, name, outfile_
     ax1.grid()
 
     # ax2.plot(((data[sel].park_avg_plus_std)+8), '.:', color = "C2", label = "  Rolling Sum Decision")
-    ax2.plot(((data[sel].turned_off) + 6), ".:", color="C4", label="Actual Schedule")
+    ax2.plot(((data[sel].actual_observation) + 6), ".:", color="C4", label="Actual Schedule")
 
     ### Wind Specific##################################################################################
     try:
@@ -289,7 +288,7 @@ def plots(data, col, start_time, end_time, hyst_min, hyst_window, name, outfile_
     #
     #
     #     ax3.plot(((data[sel].park_avg_plus_std)+8), '.:', color = "C2", label = "  Rolling Sum Decision")
-    #     ax3.plot(((data[sel].turned_off)+6), '.:', color ="C4", label = "Actual Schedule")
+    #     ax3.plot(((data[sel].actual_observation)+6), '.:', color ="C4", label = "Actual Schedule")
     #
     # ### Wind Specific##################################################################################
     #     try:
@@ -317,7 +316,8 @@ def main(
 ):
     """Run all the functions above to obtain plots
     """
-    data = get_data(input_data, start_time, end_time)
+    data = get_data(input_data)
+    data = data[start_time: end_time]
     type, threshold, name = determine_data_type(data)
     # hyst_min, hyst_window,
     if type == "rain":
@@ -325,16 +325,14 @@ def main(
     else:
         col = data.v_max
         data = wind_methods(data, threshold, window_size)
-
     data = make_decision(data, col, threshold, window_size, hyst_min, hyst_window)
-    #    print(hyst_min + hyst_window)
-    data1 = data[data["take_data"] == True]
+    data1 = data[data.planned_observation == True]
     plots(data1, col, start_time, end_time, hyst_min, hyst_window, name, outfile_name)
 
-    interval_lengths = intervals(data1["park"])
+    interval_lengths = intervals(data1.park)
     result = get_no_small_intervals(interval_lengths)
-    total_hours = (len(data.take_data)) / 60
-    actual_data_taken = data[data["turned_off"] == False]
+    total_hours = (len(data.planned_observation)) / 60
+    actual_data_taken = data[data.actual_observation == False]
     actual_hours = len(actual_data_taken)
     print("total_hours:", total_hours)
     return result
