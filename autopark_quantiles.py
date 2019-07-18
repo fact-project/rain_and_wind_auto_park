@@ -25,77 +25,63 @@ import pandas as pd
 from docopt import docopt
 
 
-def get_data(input_data, start_time, end_time):
-    """get data and clean it up for operation.
-    Get actual and planned schedule data as well.
-    """
+def load_schedules_actual_planned(start_time=None, end_time=None):
     ## Actual times when data was taken
     actual = pd.read_hdf("actual_schedule.h5")
     actual.set_index("fStart", inplace=True)
     actual.sort_index(inplace=True)
-    actual = actual[start_time:end_time]
+    if not (start_time is None or end_time is None):
+        actual = actual[start_time:end_time]
 
     ## Planned schedule for data taking
     planned = pd.read_hdf("planned_schedule.h5")
     planned.set_index("fStart", inplace=True)
     planned.sort_index(inplace=True)
-    planned = planned[start_time:end_time]
+    if not (start_time is None or end_time is None):
+        planned = planned[start_time:end_time]
 
-    ##iNPUT IS ===> updated_rain_data.h5 or all_wind_data.h5
-    stuff = pd.read_hdf(input_data)
-    stuff["good_time"] = pd.to_datetime(stuff.Time * 24 * 60 * 60 * 1e9)
-    stuff.set_index("good_time", inplace=True)
-    stuff.sort_index(inplace=True)
-    del stuff["QoS"]
-    del stuff["Time"]
-    if "rain" in stuff:
-        resampled = pd.DataFrame()
-        resampled["rain"] = stuff.rain.resample("min").mean()
-        resampled["count"] = stuff["count"].resample("min").mean()
-        stuff = resampled
+    return actual, planned
+
+
+def get_data(input_data, start_time=None, end_time=None):
+    path = input_data
+
+    df = pd.read_hdf(path)
+    df.set_index(pd.to_datetime(df.Time, unit="D"), inplace=True)
+    df.sort_index(inplace=True)
+    if "rain" in df:
+        return pd.DataFrame(df.rain.resample("min").mean())
     else:
-        del stuff["stat"]
-        resampled = pd.DataFrame()
-        resampled["v"] = stuff.v.resample("min").mean()
-        resampled["v_max"] = stuff.v_max.resample("min").mean()
-        stuff = resampled
+        return pd.DataFrame(df.v_max.resample("min").mean())
 
-    ## Join the planned schedule to the data
-    stuff = stuff.join(planned, how="outer")
-    take_data = []
-    column = stuff["fMeasurementTypeName"]
-    previous = True
-    for element in column:
-        if element == "Startup":
-            take_data.append(True)
-        elif element == "Shutdown":
-            take_data.append(False)
-        else:
-            take_data.append(previous)
-        previous = take_data[-1]
+    df = join_with_schedules(df, start_time, end_time)
+    return df
 
-    stuff["take_data"] = take_data
 
-    ### Add actual schedule
-    actual.rename(columns={"fMeasurementTypeName": "ActualMeasurement"}, inplace=True)
-    del actual["fUser"]
-    del actual["fSourceName"]
-    stuff = stuff.join(actual, how="outer")
-    actual_sch = []
-    column = stuff["ActualMeasurement"]
-    previous = True
-    for element in column:
-        if element in ("Startup", "Resume"):
-            actual_sch.append(False)
-        elif element in ("Shutdown", "Sleep", "Suspend"):
-            actual_sch.append(True)
-        else:
-            actual_sch.append(previous)
-        previous = actual_sch[-1]
+def join_with_schedules(df, start_time=None, end_time=None):
+    actual, planned = load_schedules_actual_planned(start_time, end_time)
+    colname_and_schedules = [
+        ("planned_observation", planned),
+        ("actual_observation", actual),
+    ]
 
-    stuff["turned_off"] = actual_sch
+    for colname, schedule in colname_and_schedules:
 
-    return stuff
+        schedule = schedule[schedule.fMeasurementTypeName.isin(["Startup", "Shutdown"])]
+        last_before = schedule[: df.index.min()].index.max()
+        first_after = schedule[df.index.max() :].index.min()
+
+        schedule = schedule[last_before:first_after]
+
+        df[colname] = False
+        last_startup = None
+        for x in schedule.itertuples():
+            if x.fMeasurementTypeName == "Startup":
+                last_startup = x.Index
+            if x.fMeasurementTypeName == "Shutdown":
+                df.loc[last_startup : x.Index, colname] = True
+
+    return df
 
 
 def determine_data_type(data):
@@ -273,7 +259,6 @@ def plots(data, col, start_time, end_time, hyst_min, hyst_window, name, outfile_
     ax2.grid()
 
     #    f.savefig('Wind_gust_Jan_comparison_part2.png', dpi = 300, figsize = (120,120))
-    # plt.show(block=True)
 
     ########## more general comparison plots
     # def plots(data, col,  start_time  , end_time  , hyst_min, hyst_window, name ):
@@ -330,9 +315,6 @@ def plots(data, col, start_time, end_time, hyst_min, hyst_window, name, outfile_
     #
     #
     f.savefig(outfile_name, dpi=300, figsize=(120, 120))
-
-
-#     plt.show(block=True)
 
 
 def main(
