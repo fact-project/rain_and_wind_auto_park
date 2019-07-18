@@ -25,7 +25,7 @@ import pandas as pd
 from docopt import docopt
 
 
-def load_schedules_actual_planned(start_time=None, end_time=None):
+def load_schedules_actual_planned():
     result = []
     # order here is important .. 1st actual, 2nd planned
     for path in ["actual_schedule.h5", "planned_schedule.h5"]:
@@ -33,14 +33,12 @@ def load_schedules_actual_planned(start_time=None, end_time=None):
         schedule = pd.read_hdf("actual_schedule.h5")
         schedule.set_index("fStart", inplace=True)
         schedule.sort_index(inplace=True)
-        if not (start_time is None or end_time is None):
-            schedule = schedule[start_time:end_time]
         result.append(schedule)
 
     return result
 
 
-def get_data(input_data, start_time=None, end_time=None):
+def get_data(input_data):
     path = input_data
 
     df = pd.read_hdf(path)
@@ -51,12 +49,12 @@ def get_data(input_data, start_time=None, end_time=None):
     else:
         return pd.DataFrame(df.v_max.resample("min").mean())
 
-    df = join_with_schedules(df, start_time, end_time)
+    df = join_with_schedules(df)
     return df
 
 
-def join_with_schedules(df, start_time=None, end_time=None):
-    actual, planned = load_schedules_actual_planned(start_time, end_time)
+def join_with_schedules(df):
+    actual, planned = load_schedules_actual_planned()
     colname_and_schedules = [
         ("planned_observation", planned),
         ("actual_observation", actual),
