@@ -27,14 +27,11 @@ write this into your `~/.bashrc`:
     python fits_to_h5.py $AUX_FOLDER rain_data.h5 RAIN
     python fits_to_h5.py $AUX_FOLDER wind_data.h5 WEATHER
 
-## Get the schedule.h5 files
+## Get some data from the FACT database as h5 files for convenience
 
 Make sure you have set the `FACT_PASSWORD` environment variable, then call:
 
     python download_planned_and_actual_schedule.py
-
-## Get the hadron_rate.h5 file
-
     python download_hadron_rate.py
 
 # In order to create the report do:
