@@ -26,21 +26,18 @@ from docopt import docopt
 
 
 def load_schedules_actual_planned(start_time=None, end_time=None):
-    ## Actual times when data was taken
-    actual = pd.read_hdf("actual_schedule.h5")
-    actual.set_index("fStart", inplace=True)
-    actual.sort_index(inplace=True)
-    if not (start_time is None or end_time is None):
-        actual = actual[start_time:end_time]
+    result = []
+    # order here is important .. 1st actual, 2nd planned
+    for path in ["actual_schedule.h5", "planned_schedule.h5"]:
 
-    ## Planned schedule for data taking
-    planned = pd.read_hdf("planned_schedule.h5")
-    planned.set_index("fStart", inplace=True)
-    planned.sort_index(inplace=True)
-    if not (start_time is None or end_time is None):
-        planned = planned[start_time:end_time]
+        schedule = pd.read_hdf("actual_schedule.h5")
+        schedule.set_index("fStart", inplace=True)
+        schedule.sort_index(inplace=True)
+        if not (start_time is None or end_time is None):
+            schedule = schedule[start_time:end_time]
+        result.append(schedule)
 
-    return actual, planned
+    return result
 
 
 def get_data(input_data, start_time=None, end_time=None):
