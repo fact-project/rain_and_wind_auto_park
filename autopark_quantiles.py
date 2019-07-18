@@ -18,12 +18,12 @@ Options:
   -h --help     Show this screen.
   --version     Show version.
 """
-
+import time
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from docopt import docopt
-
+from tools import calculate_hyst
 
 def load_schedules_actual_planned():
     result = []
@@ -38,9 +38,15 @@ def load_schedules_actual_planned():
     return result
 
 
-def get_data(input_data):
-    path = input_data
+def load_wind_data(path):
+    df = pd.read_hdf(path)
+    df = pd.DataFrame(df.v_max.resample("min").mean())
+    df = join_with_schedules(df)
+    return df
 
+
+
+def get_data(path):
     df = pd.read_hdf(path)
     df.set_index(pd.to_datetime(df.Time, unit="D"), inplace=True)
     df.sort_index(inplace=True)
@@ -54,13 +60,14 @@ def get_data(input_data):
 
 
 def join_with_schedules(df):
+    start_ = time.time()
     actual, planned = load_schedules_actual_planned()
     colname_and_schedules = [
-        ("planned_observation", planned),
-        ("actual_observation", actual),
+        ("planned_observation", planned, ('Startup',), ('Shutdown',)),
+        ("actual_observation", actual, ('Startup', 'Resume'), ('Shutdown', 'Sleep', 'Suspend')),
     ]
 
-    for colname, schedule in colname_and_schedules:
+    for colname, schedule, stafu, endfu, in colname_and_schedules:
 
         schedule = schedule[schedule.fMeasurementTypeName.isin(["Startup", "Shutdown"])]
         last_before = schedule[: df.index.min()].index.max()
@@ -68,13 +75,24 @@ def join_with_schedules(df):
 
         schedule = schedule[last_before:first_after]
 
-        df[colname] = False
-        last_startup = None
-        for x in schedule.itertuples():
-            if x.fMeasurementTypeName == "Startup":
-                last_startup = x.Index
-            if x.fMeasurementTypeName == "Shutdown":
-                df.loc[last_startup : x.Index, colname] = True
+        ## Join the planned schedule to the data
+        stuff = df.join(schedule, how='outer')
+        take_data = []
+        column = stuff['fMeasurementTypeName']
+        previous = True
+        for element in column:
+            if element in stafu:
+                take_data.append(True)
+            elif element in endfu:
+                take_data.append(False)
+            else:
+                take_data.append(previous)
+            previous = take_data[-1]
+
+        stuff['take_data'] = take_data
+        df[colname] = stuff.take_data[df.index]
+
+    print(f'duration: {time.time() - start_:.1f}')
     return df
 
 
@@ -98,7 +116,7 @@ def determine_data_type(data):
     # hyst_min, hyst_window, name
 
 
-def make_decision(data, col, threshold, window_size, hyst_min, hyst_window):
+def add_rolling_sum__and__park(data, col, threshold, window_size, hyst_min, hyst_window):
     """Use a rolling sum above threshold to make a decision to park.
     """
     data["rolling_sum"] = (col > threshold).rolling(window_size).sum()
@@ -106,10 +124,7 @@ def make_decision(data, col, threshold, window_size, hyst_min, hyst_window):
     return data
 
 
-def wind_methods(data, threshold, window_size):
-    """Examine an alternative method for wind. Also include a mock shifter's decisions.
-    """
-
+def attach_wind_methods(data, threshold, window_size):
     data["quantile"] = data.v_max.rolling("1h").quantile(0.95)
     data["quantile_park"] = calculate_hyst(data["quantile"], 40, 10)
 
@@ -118,40 +133,7 @@ def wind_methods(data, threshold, window_size):
 
     data["quantile3"] = data.v_max.rolling("30min").quantile(0.70)
     data["quantile_park3"] = calculate_hyst(data["quantile3"], 40, 10)
-
-    ## Alternative method for wind:
-    # Find rolling mean, and rolling std.
-    #    data = data[(data.v_max - data.v_max.rolling(window_size).mean()) >= (-1*data.v_max.rolling(window_size).std()) ]
-    data["rolling_avg_gust"] = data.v_max.rolling(window_size).mean()
-    data["rolling_sig_gust"] = data.v_max.rolling(window_size).std()
-    # Look at Rolling mean + 2 std to make decision!
-    data["rolling_gust"] = data.rolling_avg_gust + (data.rolling_sig_gust) * 2
-    # Add hysteresis. Interval is from 40 to 50 km/h.
-    data["park_avg_plus_std"] = calculate_hyst(data["rolling_gust"], 40, 10)
-
     return data
-
-
-def calculate_hyst(rolling, hyst_min, hyst_window):
-    """Prevent decisions from happening "too quickly"
-    """
-    hyst = []
-    hyst_max = hyst_min + hyst_window
-    previous = True
-    for i in rolling:
-        if i <= hyst_min:
-            hyst.append(False)
-        elif i >= hyst_max:
-            hyst.append(True)
-        elif (i >= hyst_min) & (i <= hyst_max):
-            hyst.append(previous)
-        else:
-            # this only happens if i is not a number: np.nan
-            hyst.append(previous)
-        previous = hyst[-1]
-
-    new_column = pd.Series(hyst, index=rolling.index)
-    return new_column
 
 
 def intervals(data_column):
@@ -311,7 +293,49 @@ def plots(data, col, start_time, end_time, hyst_min, hyst_window, name, outfile_
     f.savefig(outfile_name, dpi=300, figsize=(120, 120))
 
 
-def main(
+
+def wind_main(
+    input_data, start_time, end_time, window_size, hyst_min, hyst_window, outfile_name
+):
+    """Run all the functions above to obtain plots
+    """
+    data = load_wind_data(path=input_data)
+    data = data[start_time: end_time]
+
+    threshold = 50
+    hyst_min = 0
+    hyst_window = 2
+    name = "Wind Gust"
+
+    data = attach_wind_methods(data, threshold, window_size)
+    data = add_rolling_sum__and__park(
+        data,
+        data.v_max,
+        threshold,
+        window_size,
+        hyst_min,
+        hyst_window
+    )
+    total_hours = (len(data.planned_observation)) / 60
+    print("total_hours:", total_hours)
+    data = data[data.planned_observation]
+    plots(
+        data,
+        data.v_max,
+        start_time,
+        end_time,
+        hyst_min,
+        hyst_window,
+        name,
+        outfile_name
+    )
+
+    interval_lengths = intervals(data.park)
+    result = get_no_small_intervals(interval_lengths)
+    return result
+
+
+def rain_main(
     input_data, start_time, end_time, window_size, hyst_min, hyst_window, outfile_name
 ):
     """Run all the functions above to obtain plots
@@ -324,8 +348,8 @@ def main(
         col = data.rain
     else:
         col = data.v_max
-        data = wind_methods(data, threshold, window_size)
-    data = make_decision(data, col, threshold, window_size, hyst_min, hyst_window)
+        data = attach_wind_methods(data, threshold, window_size)
+    data = add_rolling_sum__and__park(data, col, threshold, window_size, hyst_min, hyst_window)
     data1 = data[data.planned_observation == True]
     plots(data1, col, start_time, end_time, hyst_min, hyst_window, name, outfile_name)
 
@@ -337,18 +361,29 @@ def main(
     print("total_hours:", total_hours)
     return result
 
-
 if __name__ == "__main__":
 
     arguments = docopt(__doc__, version="autopark 0.3")
-    print(arguments)
-    main(
-        input_data=arguments["<input_data>"],
-        # number_of_steps=int(arguments['<number_of_steps>']),
-        start_time=arguments["<start_time>"],
-        end_time=arguments["<end_time>"],
-        window_size=int(arguments["<window_size>"]),
-        hyst_min=int(arguments["<hyst_min>"]),
-        hyst_window=int(arguments["<hyst_window>"]),
-        outfile_name=arguments["<outfile_name>"],
-    )
+    if 'wind' in arguments["<input_data>"]:
+
+        wind_main(
+            input_data=arguments["<input_data>"],
+            # number_of_steps=int(arguments['<number_of_steps>']),
+            start_time=arguments["<start_time>"],
+            end_time=arguments["<end_time>"],
+            window_size=int(arguments["<window_size>"]),
+            hyst_min=int(arguments["<hyst_min>"]),
+            hyst_window=int(arguments["<hyst_window>"]),
+            outfile_name=arguments["<outfile_name>"],
+        )
+    else:
+        rain_main(
+            input_data=arguments["<input_data>"],
+            # number_of_steps=int(arguments['<number_of_steps>']),
+            start_time=arguments["<start_time>"],
+            end_time=arguments["<end_time>"],
+            window_size=int(arguments["<window_size>"]),
+            hyst_min=int(arguments["<hyst_min>"]),
+            hyst_window=int(arguments["<hyst_window>"]),
+            outfile_name=arguments["<outfile_name>"],
+        )
