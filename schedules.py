@@ -20,10 +20,12 @@ def join_with_schedules(df):
 
     for colname, schedule, stafu, endfu, in colname_and_schedules:
 
-        schedule = schedule[schedule.fMeasurementTypeName.isin(["Startup", "Shutdown"])]
+        # TODO: I think the next 5 lines are not needed, but when I remove then
+        # I get an error .. loook closer, when time
+        foo = list(stafu) + list(endfu)
+        schedule = schedule[schedule.fMeasurementTypeName.isin(foo)]
         last_before = schedule[: df.index.min()].index.max()
         first_after = schedule[df.index.max() :].index.min()
-
         schedule = schedule[last_before:first_after]
 
         ## Join the planned schedule to the data
