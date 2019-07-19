@@ -26,7 +26,7 @@ from tools import (
     intervals,
     get_no_small_intervals,
 )
-from schedules import join_with_schedules, load_schedules_actual_planned
+from schedules import join_with_schedules
 
 def load_wind_data(path):
     df = pd.read_hdf(path)
