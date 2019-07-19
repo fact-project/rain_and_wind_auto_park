@@ -1,21 +1,16 @@
 #!/usr/bin/env python
 """
-Program to decide whether FACT should autopark based on weather conditions.
-The plots compare quantile methods 90%, 95% and 70%(has smaller window)
-
-
-<input_data>   for example "foo.h5"
-<start_time>  specify start of time interval
-<end_time>  specify end of time interval
-
-
+Rain Analysis
 
 Usage:
-  wind_analysis.py <input_data> <outfile_name> <start_time> <end_time>
+  rain_analysis.py [options] <input_data>
 
 Options:
-  -h --help     Show this screen.
-  --version     Show version.
+  -h --help         Show this screen.
+  -o FILE           plot file name, if not given, no plot is made
+  --version         Show version.
+  --start=TIME      start time cut
+  --end=TIME        end time cut
 """
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -138,7 +133,7 @@ if __name__ == "__main__":
 
     wind_main(
         input_data=arguments["<input_data>"],
-        outfile_name=arguments["<outfile_name>"],
-        start_time=arguments["<start_time>"],
-        end_time=arguments["<end_time>"],
+        outfile_name=arguments["-o"],
+        start_time=arguments["--start"],
+        end_time=arguments["--end"],
     )

@@ -1,22 +1,19 @@
 #!/usr/bin/env python
 """
-Program to decide whether FACT should autopark based on weather conditions.
-The plots compare quantile methods 90%, 95% and 70%(has smaller window)
-
-
-<input_data>   for example "foo.h5"
-<start_time>  specify start of time interval
-<end_time>  specify end of time interval
-<window_size> specify the number of minutes for the rolling sum
-
-
+Rain Analysis
 
 Usage:
-  autopark_quantiles.py <input_data> <start_time> <end_time> <window_size> <hyst_min> <hyst_window> <outfile_name>
+  rain_analysis.py [options] <input_data>
 
 Options:
-  -h --help     Show this screen.
-  --version     Show version.
+  -h --help         Show this screen.
+  -o FILE           plot file name, if not given, no plot is made
+  --version         Show version.
+  --start=TIME      start time cut
+  --end=TIME        end time cut
+  --window=INT      rolling window size in minutes [default: 60]
+  --hyst_min=INT    lower hysteresis limit [default: 0]
+  --hyst_width=INT  width of hysteresis band [default: 2]
 """
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -46,21 +43,6 @@ def rain_plots(data, outfile_name):
         ".",
         label="Rain",
         alpha=0.5
-    )
-    ax1.plot(
-        data["quantile"],
-        ".:",
-        label="Rolling 95% Quantile "
-    )
-    ax1.plot(
-        data.quantile2,
-        ".:",
-        label="Rolling 90% Quantile"
-    )
-    ax1.plot(
-        data.quantile3,
-        ".:",
-        label="Rolling 70% Quantile, 30 min ",
     )
     ax1.axhspan(40, 50, facecolor="C1", alpha=0.2)
     ax1.set_ylabel("Wind Speed (km/h)", fontsize=18)
@@ -103,7 +85,11 @@ def rain_main(
 
     data = data[data.planned_observation == True]
 
-    rain_plots(data, outfile_name)
+    import IPython
+    IPython.embed()
+
+    if outfile_name:
+        rain_plots(data, outfile_name)
     interval_lengths = intervals(data.park)
     result = get_no_small_intervals(interval_lengths)
 
@@ -114,12 +100,13 @@ def rain_main(
 if __name__ == "__main__":
 
     arguments = docopt(__doc__, version="rain_analysis")
+
     rain_main(
         input_data=arguments["<input_data>"],
-        start_time=arguments["<start_time>"],
-        end_time=arguments["<end_time>"],
-        window_size=int(arguments["<window_size>"]),
-        hyst_min=int(arguments["<hyst_min>"]),
-        hyst_window=int(arguments["<hyst_window>"]),
-        outfile_name=arguments["<outfile_name>"],
+        outfile_name=arguments["-o"],
+        start_time=arguments["--start"],
+        end_time=arguments["--end"],
+        window_size=int(arguments["--window"]),
+        hyst_min=int(arguments["--hyst_min"]),
+        hyst_window=int(arguments["--hyst_width"]),
     )
