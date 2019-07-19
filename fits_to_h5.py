@@ -37,7 +37,17 @@ def main(path_to_aux_folder, out_file_name, type_name):
         result = pd.concat(frame)
 
         result.sort_values('Time', inplace=True)
+
+        result.set_index(
+            pd.to_datetime(result.Time, unit="D"),
+            inplace=True
+        )
+        result.sort_index(inplace=True)
+        del result['Time']
+
         result.to_hdf(out_file_name, key='data')
+
+
     except ValueError:
         print('no fits files found, maybe wrong path?')
 
