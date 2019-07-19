@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """
-Rain Analysis
+Wind Analysis
 
 Usage:
-  rain_analysis.py [options] <input_data>
+  wind_analysis.py [options] <input_data>
 
 Options:
   -h --help         Show this screen.
@@ -118,7 +118,9 @@ def wind_main(
 
     print("total_hours:", total_hours)
     data = data[data.planned_observation]
-    wind_plots(data, outfile_name)
+
+    if outfile_name:
+        wind_plots(data, outfile_name)
 
     data['park'] = data.quantile_park3
     interval_lengths = intervals(data.park)
