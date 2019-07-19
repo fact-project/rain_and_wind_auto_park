@@ -11,7 +11,7 @@ Options:
   --version         Show version.
   --start=TIME      start time cut
   --end=TIME        end time cut
-  --window=INT      rolling window size in minutes [default: 60]
+  --window=INT      rolling window size in minutes [default: 40]
   --hyst_min=INT    lower hysteresis limit [default: 0]
   --hyst_width=INT  width of hysteresis band [default: 2]
 """
@@ -81,12 +81,9 @@ def rain_main(
     data["rolling_sum"] = (data.rain > threshold).rolling(window_size).sum()
     data["park"] = calculate_hyst(data["rolling_sum"], hyst_min, hyst_window)
 
-    total_hours = len(data.planned_observation) / 60
+    total_hours = data.planned_observation.sum() / 60
 
     data = data[data.planned_observation == True]
-
-    import IPython
-    IPython.embed()
 
     if outfile_name:
         rain_plots(data, outfile_name)
