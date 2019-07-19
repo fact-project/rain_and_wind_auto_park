@@ -23,8 +23,9 @@ from schedules import join_with_schedules
 
 def load_wind_data(path):
     df = pd.read_hdf(path)
-    df = pd.DataFrame(df.v_max.resample("min").mean())
-    df[df.v_max == 0] = np.nan
+    df.rename(columns={'v_max':'v'}, inplace=True)
+    df = pd.DataFrame(df.v.resample("min").mean())
+    df[df.v == 0] = np.nan
     df = join_with_schedules(df)
     return df
 
@@ -34,7 +35,7 @@ def wind_plots(data, outfile_name):
     figure, (ax1, ax2) = plt.subplots(
         nrows=2, sharex=True, figsize=(30, 15), gridspec_kw={"height_ratios": [3, 2]}
     )
-    ax1.plot(data.v_max, ".", label="Wind Gust", alpha=0.5)
+    ax1.plot(data.v, ".", label="Wind Gust", alpha=0.5)
     ax1.plot(data.quantile1, ".:", label="Rolling 95% Quantile")
     ax1.plot(data.quantile2, ".:", label="Rolling 90% Quantile")
     ax1.plot(data.quantile3, ".:", label="Rolling 70% Quantile, 30 min ")
@@ -82,12 +83,12 @@ def wind_main(
 
     if not centered:
         for name, window, percent, hyst_min, hyst_width in tasks:
-            data[name] = data.v_max.rolling(window).quantile(percent)
+            data[name] = data.v.rolling(window).quantile(percent)
             data[name+"_park"] = calculate_hyst(data[name], hyst_min, hyst_width)
 
     else:
         for name, window, percent, hyst_min, hyst_width in tasks:
-            data[name] = data.v_max.rolling(min_periods=1, center=True, window=window).quantile(percent)
+            data[name] = data.v.rolling(min_periods=1, center=True, window=window).quantile(percent)
             data[name+"_park"] = calculate_hyst(data[name], hyst_min, hyst_width)
 
     data = data[start_time:end_time]
