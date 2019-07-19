@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 def calculate_hyst(rolling, hyst_min, hyst_window):
