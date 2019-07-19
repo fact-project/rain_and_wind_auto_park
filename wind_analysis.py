@@ -11,20 +11,20 @@ Options:
   --version         Show version.
   --start=TIME      start time cut
   --end=TIME        end time cut
+  --centered        if set, apply the rolling function in a centered manner
 """
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 from docopt import docopt
-from tools import (
-    calculate_hyst,
-    intervals,
-    get_no_small_intervals,
-)
+from tools import calculate_hyst, intervals, get_no_small_intervals
 from schedules import join_with_schedules
+
 
 def load_wind_data(path):
     df = pd.read_hdf(path)
     df = pd.DataFrame(df.v_max.resample("min").mean())
+    df[df.v_max == 0] = np.nan
     df = join_with_schedules(df)
     return df
 
@@ -46,13 +46,13 @@ def wind_plots(data, outfile_name):
 
     ax2.plot(
         # the boolean here needs to be inverted!
-        (1 - data.actual_observation) + 0,
+        data.actual_observation + 0,
         ".:",
         label="Actual Schedule",
     )
-    ax2.plot(data.quantile1_park + 2, ".:", label="95% Quantile Decision")
-    ax2.plot(data.quantile2_park + 4, ".:", label="90% Quantile Decision")
-    ax2.plot(data.quantile3_park + 6, ".:", label="70% Quantile Decision")
+    ax2.plot((1 - data.quantile1_park) + 2, ".:", label="95% Quantile Decision")
+    ax2.plot((1 - data.quantile2_park) + 4, ".:", label="90% Quantile Decision")
+    ax2.plot((1 - data.quantile3_park) + 6, ".:", label="70% Quantile Decision")
 
     ax2.legend(fontsize=18, loc="upper right")
     ax2.tick_params(axis="both", which="major", labelsize=18)
@@ -73,12 +73,11 @@ def wind_main(
     centered=False,
 ):
     data = load_wind_data(path=input_data)
-    data = data[start_time:end_time]
 
     tasks = [
-        ("quantile1", 60, 0.95, 40, 10),
-        ("quantile2", 60, 0.90, 40, 10),
-        ("quantile3", 30, 0.70, 40, 10),
+        ("quantile1", "1h", 0.95, 40, 10),
+        ("quantile2", "1h", 0.90, 40, 10),
+        ("quantile3", "30min", 0.70, 40, 10),
     ]
 
     if not centered:
@@ -91,15 +90,14 @@ def wind_main(
             data[name] = data.v_max.rolling(min_periods=1, center=True, window=window).quantile(percent)
             data[name+"_park"] = calculate_hyst(data[name], hyst_min, hyst_width)
 
-
+    data = data[start_time:end_time]
     hours_of_planned_observation = data.planned_observation.sum() / 60
-
     data = data[data.planned_observation]
 
     if outfile_name:
         wind_plots(data, outfile_name)
 
-    data["park"] = data.quantile_park3
+    data["park"] = data.quantile3_park
     interval_lengths = intervals(data.park)
     result = get_no_small_intervals(interval_lengths)
 
