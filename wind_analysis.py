@@ -23,8 +23,8 @@ from schedules import join_with_schedules
 
 def load_wind_data(path):
     df = pd.read_hdf(path)
+    df = pd.DataFrame(df.v_max.resample("min").mean())
     df.rename(columns={'v_max':'v'}, inplace=True)
-    df = pd.DataFrame(df.v.resample("min").mean())
     df[df.v == 0] = np.nan
     df = join_with_schedules(df)
     return df
@@ -76,19 +76,27 @@ def wind_main(
     data = load_wind_data(path=input_data)
 
     tasks = [
-        ("quantile1", "1h", 0.95, 40, 10),
-        ("quantile2", "1h", 0.90, 40, 10),
-        ("quantile3", "30min", 0.70, 40, 10),
+        ("quantile1", "1h", 0.95, 40, 10, 0),
+        ("quantile2", "1h", 0.90, 40, 10, 2),
+        ("quantile3", "30min", 0.70, 40, 10, 4),
     ]
 
-    if not centered:
-        for name, window, percent, hyst_min, hyst_width in tasks:
-            data[name] = data.v.rolling(window).quantile(percent)
+    for name, window, percent, hyst_min, hyst_width, foo_shift in tasks:
+        if not centered:
+            data[name] = data.v.rolling(window).quantile(percent) + foo_shift
             data[name+"_park"] = calculate_hyst(data[name], hyst_min, hyst_width)
 
-    else:
-        for name, window, percent, hyst_min, hyst_width in tasks:
-            data[name] = data.v.rolling(min_periods=1, center=True, window=window).quantile(percent)
+        else:
+            time_delta = pd.to_timedelta(window) / -2
+            data[name] = (
+                data.v
+                .rolling(window)
+                .quantile(percent)
+                .shift(
+                    periods=int(time_delta.total_seconds()),
+                    freq='s'
+                )
+            ) + foo_shift
             data[name+"_park"] = calculate_hyst(data[name], hyst_min, hyst_width)
 
     data = data[start_time:end_time]
