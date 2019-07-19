@@ -28,8 +28,7 @@ def load_schedules_actual_planned():
     result = []
     # order here is important .. 1st actual, 2nd planned
     for path in ["actual_schedule.h5", "planned_schedule.h5"]:
-
-        schedule = pd.read_hdf("actual_schedule.h5")
+        schedule = pd.read_hdf(path)
         schedule.set_index("fStart", inplace=True)
         schedule.sort_index(inplace=True)
         result.append(schedule)
@@ -76,9 +75,8 @@ def join_with_schedules(df):
         ## Join the planned schedule to the data
         stuff = df.join(schedule, how='outer')
         take_data = []
-        column = stuff['fMeasurementTypeName']
         previous = True
-        for element in column:
+        for element in stuff.fMeasurementTypeName:
             if element in stafu:
                 take_data.append(True)
             elif element in endfu:
@@ -289,9 +287,79 @@ def plots(data, col, start_time, end_time, hyst_min, hyst_window, name, outfile_
     f.savefig(outfile_name, dpi=300, figsize=(120, 120))
 
 
+def wind_plots(data, outfile_name):
+
+    figure, (ax1, ax2) = plt.subplots(
+        nrows=2,
+        sharex=True,
+        figsize=(30, 15),
+        gridspec_kw={"height_ratios": [3, 2]}
+    )
+    ax1.plot(
+        data.v_max,
+        ".",
+        label="Wind Gust",
+        alpha=0.5
+    )
+    ax1.plot(
+        data["quantile"],
+        ".:",
+        label="Rolling 95% Quantile"
+    )
+    ax1.plot(
+        data.quantile2,
+        ".:",
+        label="Rolling 90% Quantile"
+    )
+    ax1.plot(
+        data.quantile3,
+        ".:",
+        label="Rolling 70% Quantile, 30 min ",
+    )
+    ax1.axhspan(40, 50, facecolor="C1", alpha=0.2)
+    ax1.set_ylabel("Wind Speed (km/h)", fontsize=18)
+    ax1.legend(fontsize=18, loc="upper right")
+    ax1.tick_params(axis="both", which="major", labelsize=18)
+    ax1.grid()
+
+    ax2.plot(
+        # the boolean here needs to be inverted!
+        (1 - data.actual_observation) + 0,
+        ".:",
+        label="Actual Schedule"
+    )
+    ax2.plot(
+        data.quantile_park + 2,
+        ".:",
+        label="95% Quantile Decision",
+    )
+    ax2.plot(
+        data.quantile_park2 + 4,
+        ".:",
+        label="90% Quantile Decision",
+    )
+    ax2.plot(
+        data.quantile_park3 + 6,
+        ".:",
+        label="70% Quantile Decision",
+    )
+
+    ax2.legend(fontsize=18, loc="upper right")
+    ax2.tick_params(axis="both", which="major", labelsize=18)
+    ax2.set_yticks(list(range(8)))
+    ax2.set_yticklabels(['park', 'observe', 'park', 'observe', 'park', 'observe', 'park', 'observe'])
+    ax2.grid()
+
+    figure.savefig(outfile_name, dpi=300, figsize=(120, 120))
+
+
 
 def wind_main(
-    input_data, start_time, end_time, window_size, hyst_min, hyst_window, outfile_name
+    input_data,
+    outfile_name,
+    start_time=None,
+    end_time=None,
+    window_size=10
 ):
     """Run all the functions above to obtain plots
     """
@@ -299,33 +367,15 @@ def wind_main(
     data = data[start_time: end_time]
 
     threshold = 50
-    hyst_min = 0
-    hyst_window = 2
-    name = "Wind Gust"
 
     data = attach_wind_methods(data, threshold, window_size)
-    data = add_rolling_sum__and__park(
-        data,
-        data.v_max,
-        threshold,
-        window_size,
-        hyst_min,
-        hyst_window
-    )
     total_hours = (len(data.planned_observation)) / 60
+
     print("total_hours:", total_hours)
     data = data[data.planned_observation]
-    plots(
-        data,
-        data.v_max,
-        start_time,
-        end_time,
-        hyst_min,
-        hyst_window,
-        name,
-        outfile_name
-    )
+    wind_plots(data, outfile_name)
 
+    data['park'] = data.quantile_park3
     interval_lengths = intervals(data.park)
     result = get_no_small_intervals(interval_lengths)
     return result
@@ -364,13 +414,9 @@ if __name__ == "__main__":
 
         wind_main(
             input_data=arguments["<input_data>"],
-            # number_of_steps=int(arguments['<number_of_steps>']),
+            outfile_name=arguments["<outfile_name>"],
             start_time=arguments["<start_time>"],
             end_time=arguments["<end_time>"],
-            window_size=int(arguments["<window_size>"]),
-            hyst_min=int(arguments["<hyst_min>"]),
-            hyst_window=int(arguments["<hyst_window>"]),
-            outfile_name=arguments["<outfile_name>"],
         )
     else:
         rain_main(
