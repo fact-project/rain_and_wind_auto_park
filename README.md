@@ -2,11 +2,62 @@
 
 A continously running process, which modifies the FACT schedule in order to park in case of adverse weather conditions
 
-## Plan for software development stuff
+----
 
- - in the end, we want a single program, which can be called (started) on LA Palma, maybe with a command like: ".. dunno .." for this, we need to devine a "console_script" inside the setup.py, so we automatically get a callable "entry point" after the installation.
+# Find your aux files and store the location in a shell variable
+explain the guy to find where he has his aux files stored on his disk ... we use `your_aux_folder` for this from here on.
+
+example
+
+    AUX_FOLDER=/home/dneise/Downloads/blue_stick_21_06_2019/aux
+
+# Get the FACT std password
+
+Ask your supervisor or colleagues for the current FACT std password and store
+it in an environment variable named `FACT_PASSWORD` for convience. E.g. on Ubuntu
+write this into your `~/.bashrc`:
+
+    export FACT_PASSWORD="the_secret_password"
 
 
+# What to do first
+
+## prepare the wind and rain input data for convenience
+
+    python fits_to_h5.py $AUX_FOLDER rain_data.h5 RAIN
+    python fits_to_h5.py $AUX_FOLDER wind_data.h5 WEATHER
+
+## Get some data from the FACT database as h5 files for convenience
+
+Make sure you have set the `FACT_PASSWORD` environment variable, then call:
+
+    python download_planned_and_actual_schedule.py
+    python download_hadron_rate.py
+
+# In order to create the report do:
+
+    python wind_analysis.py wind_data.h5 --start="2018-01-01 00:00" --end="2019-03-31 00:00" -o overview_wind_performance.png
+    python wind_analysis.py wind_data.h5 --start="2018-01-21 19:00" --end="2018-01-22 06:00" -o 20180121_performance.png
+    python wind_analysis.py wind_data.h5 --start="2018-03-20 20:00" --end="2018-03-21 06:00" -o 20180320_performance.png
+    python wind_analysis.py wind_data.h5 --start="2018-03-09 19:00" --end="2018-03-10 06:00" -o 20180309_performance.png
+    python wind_analysis.py wind_data.h5 --start="2019-02-13 19:00" --end="2019-02-14 07:00" -o 20190213_performance.png
+    python wind_analysis.py wind_data.h5 --start="2018-11-02 19:00" --end="2018-11-03 07:00" -o 20181102_performance.png
+
+    python wind_analysis.py wind_data.h5 --centered --start="2018-01-01 00:00" --end="2019-03-31 00:00" -o overview_wind_performance_centered.png
+    python wind_analysis.py wind_data.h5 --centered --start="2018-01-21 19:00" --end="2018-01-22 06:00" -o 20180121_performance_centered.png
+    python wind_analysis.py wind_data.h5 --centered --start="2018-03-20 20:00" --end="2018-03-21 06:00" -o 20180320_performance_centered.png
+    python wind_analysis.py wind_data.h5 --centered --start="2018-03-09 19:00" --end="2018-03-10 06:00" -o 20180309_performance_centered.png
+    python wind_analysis.py wind_data.h5 --centered --start="2019-02-13 19:00" --end="2019-02-14 07:00" -o 20190213_performance_centered.png
+    python wind_analysis.py wind_data.h5 --centered --start="2018-11-02 19:00" --end="2018-11-03 07:00" -o 20181102_performance_centered.png
 
 
+# Good runs lost:
 
+    python goodruns.py
+
+
+###  Some notes for the weekend
+
+ - maybe progress bar for autopark_quantiles?
+ - the number of total hours or good hours should maybe be stored in a file.
+ - for a study with different windows
